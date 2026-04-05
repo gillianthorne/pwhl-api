@@ -15,11 +15,8 @@ class Faceoff(Base):
     x_location = Column(Integer)
     y_location = Column(Integer)
     home_win = Column(Boolean)
+    id = Column(Integer, primary_key=True)
 
     home_player = relationship("Player", foreign_keys=[home_player_id])
     visiting_player = relationship("Player", foreign_keys=[visiting_player_id])
     game = relationship("Game")
-
-    __table_args__ = (
-        PrimaryKeyConstraint("game_id", "period", "time")
-    )

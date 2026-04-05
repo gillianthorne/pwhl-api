@@ -13,11 +13,8 @@ class PenaltyShot(Base):
     period = Column(String(3))
     time = Column(Time)
     is_goal = Column(Boolean)
+    id = Column(Integer, primary_key=True)
 
     shooter = relationship("Player", foreign_keys=[shooter_id])
     goalie = relationship("Player", foreign_keys=[goalie_id])
     game = relationship("Game")
-
-    __table_args__ = (
-        PrimaryKeyConstraint("game_id", "period", "time")
-    )

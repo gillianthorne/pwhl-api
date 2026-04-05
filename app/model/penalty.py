@@ -7,7 +7,7 @@ from app.database import Base
 class Penalty(Base):
     __tablename__ = "penalties"
 
-    id = Column(Integer, primary_key=True)
+    penalty_id = Column(Integer, primary_key=True)
     taken_by_id = Column(Integer, ForeignKey("players.id"))
     served_by_id = Column(Integer, ForeignKey("players.id"))
     game_id = Column(Integer, ForeignKey("games.id"))

@@ -14,11 +14,8 @@ class Hit(Base):
     x_location = Column(Integer)
     y_location = Column(Integer)
     on_player_id = Column(Integer, ForeignKey("players.id"))
+    id = Column(Integer, primary_key=True)
 
     player = relationship("Player", foreign_keys=[player_id])
     game = relationship("Game")
     on_player = relationship("Player", foreign_keys=[on_player_id])
-
-    __table_args__ = (
-        PrimaryKeyConstraint("player_id", "game_id", "period", "time")
-    )

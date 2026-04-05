@@ -15,14 +15,11 @@ class BlockedShot(Base):
     time = Column(Time)
     x_location = Column(Integer)
     y_location = Column(Integer)
-    quality = String(20)
-    shot_type = String(20)
+    quality = Column(String(20))
+    type = Column(String(20))
+    id = Column(Integer, primary_key=True)
 
     shooter = relationship("Player", foreign_keys=[shooter_id])
     blocker = relationship("Player", foreign_keys=[blocker_id])
     goalie = relationship("Player", foreign_keys=[goalie_id])
     game = relationship("Game")
-
-    __table_args__ = (
-        PrimaryKeyConstraint("game_id", "period", "time")
-    )

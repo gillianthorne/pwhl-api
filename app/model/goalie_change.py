@@ -12,10 +12,8 @@ class GoalieChange(Base):
     period = Column(String(3))
     time = Column(Time)
     entering = Column(Boolean)
+    id = Column(Integer, primary_key=True)
 
     player = relationship("Player")
     game = relationship("Game")
 
-    __table_args__ = (
-        PrimaryKeyConstraint("player_id", "game_id", "period", "time")
-    )

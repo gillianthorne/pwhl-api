@@ -12,12 +12,9 @@ class Shootout(Base):
     game_id = Column(Integer, ForeignKey("games.id"))
     is_goal = Column(Boolean)
     is_gamewinninggoal = Column(Boolean)
-    shootout_attempt = Column(Boolean)
+    shootout_attempt = Column(Integer)
+    id = Column(Integer, primary_key=True)
 
     shooter = relationship("Player", foreign_keys=[shooter_id])
     goalie = relationship("Player", foreign_keys=[goalie_id])
     game = relationship("Game")
-
-    __table_args__ = (
-        PrimaryKeyConstraint("shooter_id", "game_id", "shootout_attempt")
-    )
