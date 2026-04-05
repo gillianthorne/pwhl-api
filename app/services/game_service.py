@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+from sqlalchemy.orm import joinedload
+
 from app.model.assist import Assist
 from app.model.blocked_shot import BlockedShot
 from app.model.faceoff import Faceoff
@@ -18,71 +20,120 @@ from app.model.player import Player
 from app.model.game import Game
 from app.model.goal import Goal
 
+import time
 
 def build_game_json(db, game_id: int):
     game = db.query(Game).filter(Game.id == game_id).first()
 
-    goals = db.query(Goal).filter(Goal.game_id == game_id).all()
+    players = db.query(Player.id, Player.name).all()
+    player_map = {p.id: p.name for p in players}
 
-    assists = db.query(Assist).join(Goal).filter(Goal.game_id == game_id).all()
+    goals = (
+        db.query(Goal)
+        .filter(Goal.game_id == game_id)
+        .all()
+    )
+    
+    assists = (
+        db.query(Assist)
+        .join(Goal).
+        filter(Goal.game_id == game_id)
+        .all()
+    )
     assist_by_goal = defaultdict(list)
     for a in assists:
         assist_by_goal[a.goal_id].append(a)
 
-    plusminus = db.query(PlusMinus).join(Goal).filter(Goal.game_id == game_id).all()
+    plusminus = (
+        db.query(PlusMinus)
+        .join(Goal)
+        .filter(Goal.game_id == game_id)
+        .all()
+    )
     plus_by_goal = defaultdict(list)
     minus_by_goal = defaultdict(list)
     for pm in plusminus:
         plus_by_goal[pm.goal_id].append(pm) if pm.is_plus else minus_by_goal[pm.goal_id].append(pm)
 
-    penalties = db.query(Penalty).filter(Penalty.game_id == game_id).all()
+    penalties = (
+        db.query(Penalty)
+        .filter(Penalty.game_id == game_id)
+        .all()
+    )
 
-    shots = db.query(Shot).filter(Shot.game_id == game_id).all()
+    shots = (
+        db.query(Shot)
+        .filter(Shot.game_id == game_id)
+        .all()
+    )
 
-    hits = db.query(Hit).filter(Hit.game_id == game_id).all()
+    hits = (
+        db.query(Hit)
+        .filter(Hit.game_id == game_id)
+        .all()
+    )
 
-    blocked_shots = db.query(BlockedShot).filter(BlockedShot.game_id == game_id).all()
+    start = time.time()
+    blocked_shots = (
+        db.query(BlockedShot)
+        .filter(BlockedShot.game_id == game_id)
+        .all()
+    )
 
-    faceoffs = db.query(Faceoff).filter(Faceoff.game_id == game_id).all()
+    start = time.time()
+    faceoffs = (
+        db.query(Faceoff)
+        .filter(Faceoff.game_id == game_id)
+        .all()
+    )
 
-    goalie_changes = db.query(GoalieChange).filter(GoalieChange.game_id == game_id).all()
+    start = time.time()
+    goalie_changes = (
+        db.query(GoalieChange)
+        .filter(GoalieChange.game_id == game_id)
+    )
 
-    penalty_shots = db.query(PenaltyShot).filter(PenaltyShot.game_id == game_id).all()
-
-    shootouts = db.query(Shootout).filter(Shootout.game_id == game_id).all()
+    start = time.time()
+    penalty_shots = (
+        db.query(PenaltyShot)
+        .filter(PenaltyShot.game_id == game_id)
+        .all()
+    )
+    
+    start = time.time()
+    shootouts = (
+        db.query(Shootout)
+        .filter(Shootout.game_id == game_id)
+        .all()
+    )
     shootouts_by_round = defaultdict(list)
     for s in shootouts:
         shootouts_by_round[s.shootout_attempt].append(s)
-    print(shootouts_by_round)
 
     goal_list = []
     for g in goals:
         goal_list.append({
             "type": "goal",
             "id": g.id,
-            "scorer_id": g.scorer.id,
-            "scorer": g.scorer.name,
+            "scorer": player_map.get(g.scorer_id),
             "period": g.period,
             "time": str(g.time),
             "data": {
                 "assists": [
                     {
-                        "player_id": a.player.id,
-                        "player": a.player.name,
+                        "player": player_map.get(a.player_id),
                         "type": "primary" if a.primary_secondary == 1 else "secondary"
                     }
                     for a in assist_by_goal[g.id]
                 ],
                 "plus": [
                     {
-                        "player_id": p.player.id,
-                        "player": p.player.name
+                        "player": player_map.get(p.player_id)
                     } for p in plus_by_goal[g.id]
                 ],
                 "minus": [
                     {
-                        "player_id": m.player.id,
-                        "player": m.player.name
+                        "player": player_map.get(m.player_id)
                     } for m in minus_by_goal[g.id]
                 ],
                 "strength": {
@@ -107,10 +158,8 @@ def build_game_json(db, game_id: int):
             "period": p.period,
             "time": str(p.time),
             "data": {
-                "taken_by_id": p.taken_by.id,
-                "taken_by": p.taken_by.name,
-                "served_by_id": p.served_by.id,
-                "served_by": p.served_by.name,
+                "taken_by": player_map.get(p.taken_by_id),
+                "seved_by": player_map.get(p.served_by_id),
                 "length": p.length,
                 "type": p.description,
                 "bench": p.is_bench,
@@ -126,10 +175,8 @@ def build_game_json(db, game_id: int):
             "period": s.period,
             "time": str(s.time),
             "data": ({
-                "shooter_id": s.shooter.id,
-                "shooter": s.shooter.name,
-                "goalie_id": s.goalie.id,
-                "goalie": s.goalie.name,
+                "shooter": player_map.get(s.shooter_id),
+                "goalie": player_map.get(s.goalie_id),
                 "goal": s.is_goal,
                 "type": s.type,
                 "quality": s.quality,
@@ -148,10 +195,8 @@ def build_game_json(db, game_id: int):
             "period": h.period,
             "time": str(h.time),
             "data": {
-                "player_id": h.player.id,
-                "player": h.player.name,
-                "on_player_id": h.on_player.id if h.on_player is not None else None,
-                "on_player": h.on_player.name if h.on_player is not None else None,
+                "player": player_map.get(h.player_id),
+                "on_player": player_map.get(h.on_player_id) if h.on_player_id is not None else None,
                 "coordinates": {
                     "x_location": h.x_location,
                     "y_location": h.y_location
@@ -167,12 +212,9 @@ def build_game_json(db, game_id: int):
             "period": b.period,
             "time": str(b.time),
             "data": {
-                "shooter_id": b.shooter.id,
-                "shooter": b.shooter.name,
-                "blocker_id": b.shooter.id,
-                "blocker": b.blocker.name,
-                "goalie_id": b.goalie.id,
-                "goalie": b.goalie.name,
+                "shooter": player_map.get(b.shooter_id),
+                "blocker": player_map.get(b.blocker_id),
+                "goalie": player_map.get(b.goalie_id),
                 "type": b.type,
                 "quality": b.quality,
                 "coordinates": {
@@ -190,10 +232,8 @@ def build_game_json(db, game_id: int):
             "period": f.period,
             "time": str(f.time),
             "data": {
-                "home_player_id": f.home_player.id,
-                "home_player": f.home_player.name,
-                "visiting_player_id": f.visiting_player.id,
-                "visiting_player": f.visiting_player.name,
+                "home_player": player_map.get(f.home_player_id),
+                "visiting_player": player_map.get(f.visiting_player_id),
                 "home_win": f.home_win,
                 "coordinates": {
                     "x_location": f.x_location,
@@ -210,8 +250,7 @@ def build_game_json(db, game_id: int):
             "period": g.period,
             "time": str(g.time),
             "data": {
-                "goalie_id": g.player.id,
-                "goalie": g.player.name,
+                "goalie": player_map.get(g.player_id),
                 "entering": g.entering
             }
         })
@@ -224,10 +263,8 @@ def build_game_json(db, game_id: int):
             "period": p.period,
             "time": str(p.time),
             "data": {
-                "shooter_id": p.shooter.id,
-                "shooter": p.shooter,
-                "goalie_id": p.goalie.id,
-                "goalie": p.goalie,
+                "shooter": player_map.get(p.shooter_id),
+                "goalie": player_map.get(p.goalie_id),
                 "goal": p.is_goal
             }
         })
@@ -238,10 +275,8 @@ def build_game_json(db, game_id: int):
             round:
             [
                 {
-                    "shooter_id": s.shooter.id,
-                    "shooter": s.shooter.name,
-                    "goalie_id": s.goalie.id,
-                    "goalie": s.goalie.name,
+                    "shooter": player_map.get(s.shooter_id),
+                    "goalie": player_map.get(s.goalie_id),
                     "goal": s.is_goal,
                     "gamewinninggoal": s.is_gamewinninggoal
                 }
