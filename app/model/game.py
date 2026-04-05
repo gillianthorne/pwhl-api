@@ -10,7 +10,7 @@ class Game(Base):
     home_team_id = Column(Integer, ForeignKey("teams.id"))
     visiting_team_id = Column(Integer, ForeignKey("teams.id"))
     season = Column(Integer, ForeignKey("seasons.id"))
-    venue = Column(Integer, ForeignKey("arenas.id"))
+    venue = Column(Integer, ForeignKey("arenas.venue_id"))
     attendance = Column(Integer)
     start_time = Column(Time)
     end_time = Column(Time)

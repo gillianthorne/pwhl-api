@@ -19,8 +19,7 @@ from app.model.season import Season
 from app.model.player import Player
 from app.model.game import Game
 from app.model.goal import Goal
-
-import time
+from utils.utils import time_to_seconds, format_time
 
 def build_game_json(db, game_id: int):
     game = db.query(Game).filter(Game.id == game_id).first()
@@ -73,34 +72,29 @@ def build_game_json(db, game_id: int):
         .all()
     )
 
-    start = time.time()
     blocked_shots = (
         db.query(BlockedShot)
         .filter(BlockedShot.game_id == game_id)
         .all()
     )
 
-    start = time.time()
     faceoffs = (
         db.query(Faceoff)
         .filter(Faceoff.game_id == game_id)
         .all()
     )
 
-    start = time.time()
     goalie_changes = (
         db.query(GoalieChange)
         .filter(GoalieChange.game_id == game_id)
     )
 
-    start = time.time()
     penalty_shots = (
         db.query(PenaltyShot)
         .filter(PenaltyShot.game_id == game_id)
         .all()
     )
     
-    start = time.time()
     shootouts = (
         db.query(Shootout)
         .filter(Shootout.game_id == game_id)
@@ -117,7 +111,7 @@ def build_game_json(db, game_id: int):
             "id": g.id,
             "scorer": player_map.get(g.scorer_id),
             "period": g.period,
-            "time": str(g.time),
+            "time": format_time(g.time),
             "data": {
                 "assists": [
                     {
@@ -156,7 +150,7 @@ def build_game_json(db, game_id: int):
             "type": "penalty",
             "id": p.penalty_id,
             "period": p.period,
-            "time": str(p.time),
+            "time": format_time(p.time),
             "data": {
                 "taken_by": player_map.get(p.taken_by_id),
                 "seved_by": player_map.get(p.served_by_id),
@@ -173,7 +167,7 @@ def build_game_json(db, game_id: int):
             "type": "shot",
             "id": s.id,
             "period": s.period,
-            "time": str(s.time),
+            "time": format_time(s.time),
             "data": ({
                 "shooter": player_map.get(s.shooter_id),
                 "goalie": player_map.get(s.goalie_id),
@@ -193,7 +187,7 @@ def build_game_json(db, game_id: int):
             "type": "hit",
             "id": h.id,
             "period": h.period,
-            "time": str(h.time),
+            "time": format_time(h.time),
             "data": {
                 "player": player_map.get(h.player_id),
                 "on_player": player_map.get(h.on_player_id) if h.on_player_id is not None else None,
@@ -210,7 +204,7 @@ def build_game_json(db, game_id: int):
             "type": "blocked_shot",
             "id": b.id,
             "period": b.period,
-            "time": str(b.time),
+            "time": format_time(b.time),
             "data": {
                 "shooter": player_map.get(b.shooter_id),
                 "blocker": player_map.get(b.blocker_id),
@@ -230,7 +224,7 @@ def build_game_json(db, game_id: int):
             "type": "faceoff",
             "id": f.id,
             "period": f.period,
-            "time": str(f.time),
+            "time": format_time(f.time),
             "data": {
                 "home_player": player_map.get(f.home_player_id),
                 "visiting_player": player_map.get(f.visiting_player_id),
@@ -248,7 +242,7 @@ def build_game_json(db, game_id: int):
             "type": "goalie_change",
             "id": g.id,
             "period": g.period,
-            "time": str(g.time),
+            "time": format_time(g.time),
             "data": {
                 "goalie": player_map.get(g.player_id),
                 "entering": g.entering
@@ -261,7 +255,7 @@ def build_game_json(db, game_id: int):
             "type": "penalty_shot",
             "id": p.id,
             "period": p.period,
-            "time": str(p.time),
+            "time": format_time(p.time),
             "data": {
                 "shooter": player_map.get(p.shooter_id),
                 "goalie": player_map.get(p.goalie_id),
@@ -286,16 +280,43 @@ def build_game_json(db, game_id: int):
         for round in range(1, len(shootouts_by_round)+1)
         }
     }
-    return {
+    
+    timeline = (
+        goalie_change_list +
+        faceoff_list +
+        shot_list +
+        goal_list +
+        penalty_list +
+        hit_list + 
+        blocked_shot_list +
+        penalty_shot_list
+    )
+
+    timeline.sort(
+        key= lambda e: (
+            e["period"],
+            time_to_seconds(e["time"])
+        )
+    )
+
+    game_data = {
         "game_id": game.id,
         "date": str(game.date),
-        "goals": goal_list,
-        "penalties": penalty_list,
-        "shots": shot_list,
-        "hits": hit_list,
-        "blocked_shots": blocked_shot_list,
-        "faceoffs": faceoff_list,
-        "goalie_changes": goalie_change_list,
-        "penalty_shots": penalty_shot_list,
-        "shootout": shootout,
+        "home_team": game.home_team.name,
+        "visiting_team": game.visiting_team.name,
+        "season": game.game_season.name,
+        "venue": game.game_venue.name,
+        "attendance": game.attendance
     }
+
+    if len(shootout["rounds"]) > 0:
+        return {
+            "game_data": game_data,
+            "events": timeline,
+            "shootout": shootout
+        }
+    else:
+        return {
+            "game_data": game_data,
+            "events": timeline
+        }
