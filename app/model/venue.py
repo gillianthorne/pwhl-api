@@ -5,7 +5,7 @@ from app.database import Base
 class Venue(Base):
     __tablename__ = "arenas"
 
-    id = Column(Integer)
+    id = Column(Integer, primary_key=True)
     name = Column(String(50))
     city = Column(String(20))
     province_state = Column(String(20))
