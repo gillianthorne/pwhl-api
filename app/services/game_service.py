@@ -19,7 +19,7 @@ from app.model.season import Season
 from app.model.player import Player
 from app.model.game import Game
 from app.model.goal import Goal
-from utils.utils import time_to_seconds, format_time
+from utils.utils import time_convert, time_to_seconds, format_time
 
 def build_game_json(db, game_id: int):
     game = db.query(Game).filter(Game.id == game_id).first()
@@ -320,3 +320,41 @@ def build_game_json(db, game_id: int):
             "game_data": game_data,
             "events": timeline
         }
+    
+def get_games_json(db, query_filters: dict):
+    query = db.query(Game)
+
+    if query_filters["team_id"]:
+        query = query.filter(
+            (Game.home_team_id == query_filters["team_id"])
+            |
+            (Game.visiting_team_id == query_filters["team_id"])
+        )
+
+    if query_filters["league_year"]:
+        query = query.filter(
+            Game.season.season_year == query_filters["league_year"]
+        )
+    
+    if query_filters["season_type"]:
+        query = query.filter(
+            Game.season.season_type == query_filters["season_type"]
+        )
+
+    all_games = query.all()
+
+    games = []
+    for game in all_games:
+        games.append({
+            "id": game.id,
+            "date": str(game.date),
+            "home_team": game.home_team.name,
+            "visiting_team": game.visiting_team.name,
+            "season": game.game_season.name,
+            "venue": game.game_venue.name,
+            "start_time": time_convert(game.start_time),
+            "end_time": time_convert(game.end_time),
+            "duration": time_convert(game.duration)
+        })
+
+    return games

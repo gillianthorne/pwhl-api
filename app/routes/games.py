@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.database import SessionLocal
-from app.services.game_service import build_game_json
+from app.services.game_service import build_game_json, get_games_json
 
 
 router = APIRouter()
@@ -28,3 +28,19 @@ def get_event_type(game_id:int, event_type:str, db=Depends(get_db)):
     
     return filtered
     
+@router.get("/")
+def get_all_games(
+    team_id: int | None = None,
+    league_year: str | None = None,
+    season_type: int | None = None,
+    db = Depends(get_db)
+):
+    None
+
+    # get query filters
+    qf = {}
+    qf["team_id"] = team_id if team_id else None
+    qf["league_year"] = league_year if league_year else None
+    qf["season_type"] = season_type if season_type else None
+
+    return get_games_json(db, qf)
