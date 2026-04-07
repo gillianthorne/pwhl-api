@@ -5,7 +5,7 @@ This API provides detailed data about games, players,teams, and in-game events. 
 
 ---
 
-##DOCUMENTATION STRUCTURE
+## DOCUMENTATION STRUCTURE
 - [Games](./games/README.md)
 - [Players](./players/README.md)
 - [Teams](./teams/README.md)
