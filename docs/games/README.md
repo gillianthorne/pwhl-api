@@ -2,8 +2,7 @@
 
 ## ENDPOINTS
 - [`GET /games`](#get-games)
-- [`GET /games/{game_id}`](#get-game-by-id)
-
+- [`GET /games/{game_id}`](#get-gamesgame_id)
 ## GET /games
 Retrieve a list of games with optional filters.
 
