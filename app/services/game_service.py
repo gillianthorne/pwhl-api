@@ -333,12 +333,12 @@ def get_games_json(db, query_filters: dict):
 
     if query_filters["league_year"]:
         query = query.filter(
-            Game.season.season_year == query_filters["league_year"]
+            Game.game_season.has(Season.season_year == query_filters["league_year"])
         )
-    
+
     if query_filters["season_type"]:
         query = query.filter(
-            Game.season.season_type == query_filters["season_type"]
+            Game.game_season.has(Season.season_type == query_filters["season_type"])
         )
 
     all_games = query.all()

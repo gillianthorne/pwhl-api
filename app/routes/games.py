@@ -12,34 +12,37 @@ def get_db():
         yield db
     finally:
         db.close()
-
+    
 @router.get("/{game_id}")
-def get_game(game_id:int, db=Depends(get_db)):
-    return build_game_json(db, game_id)
-
-@router.get("/{game_id}/{event_type}")
-def get_event_type(game_id:int, event_type:str, db=Depends(get_db)):
-    events =  build_game_json(db, game_id)["events"]
-
-    filtered = [e for e in events if e["type"] == event_type]
+def get_game(
+    game_id,
+    event_type: str | None = None,
+    db = Depends(get_db),
+):
+    events = build_game_json(db, game_id)
+    if not event_type:
+        print("not event type")
+        return events
+    
+    filtered = [e for e in events["events"] if e["type"] == event_type]
 
     if not filtered:
-        return {"error": "no events found or invalid type"}
+        return {"error": "{event_type} does not exist."}
     
     return filtered
-    
+
+
 @router.get("/")
 def get_all_games(
-    team_id: int | None = None,
+    team: int | None = None,
     league_year: str | None = None,
     season_type: int | None = None,
     db = Depends(get_db)
 ):
-    None
 
     # get query filters
     qf = {}
-    qf["team_id"] = team_id if team_id else None
+    qf["team_id"] = team if team else None
     qf["league_year"] = league_year if league_year else None
     qf["season_type"] = season_type if season_type else None
 
