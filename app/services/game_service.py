@@ -109,25 +109,25 @@ def build_game_json(db, game_id: int):
         goal_list.append({
             "type": "goal",
             "id": g.id,
-            "scorer": player_map.get(g.scorer_id),
             "period": g.period,
             "time": format_time(g.time),
             "data": {
+                "scorer": g.scorer_id,
                 "assists": [
                     {
-                        "player": player_map.get(a.player_id),
+                        "player": a.player_id,
                         "type": "primary" if a.primary_secondary == 1 else "secondary"
                     }
                     for a in assist_by_goal[g.id]
                 ],
                 "plus": [
                     {
-                        "player": player_map.get(p.player_id)
+                        "player": p.player_id
                     } for p in plus_by_goal[g.id]
                 ],
                 "minus": [
                     {
-                        "player": player_map.get(m.player_id)
+                        "player": m.player_id
                     } for m in minus_by_goal[g.id]
                 ],
                 "strength": {
@@ -152,8 +152,8 @@ def build_game_json(db, game_id: int):
             "period": p.period,
             "time": format_time(p.time),
             "data": {
-                "taken_by": player_map.get(p.taken_by_id),
-                "seved_by": player_map.get(p.served_by_id),
+                "taken_by": p.taken_by_id,
+                "seved_by": p.served_by_id,
                 "length": p.length,
                 "type": p.description,
                 "bench": p.is_bench,
@@ -169,8 +169,8 @@ def build_game_json(db, game_id: int):
             "period": s.period,
             "time": format_time(s.time),
             "data": ({
-                "shooter": player_map.get(s.shooter_id),
-                "goalie": player_map.get(s.goalie_id),
+                "shooter": s.shooter_id,
+                "goalie": s.goalie_id,
                 "goal": s.is_goal,
                 "type": s.type,
                 "quality": s.quality,
@@ -189,8 +189,8 @@ def build_game_json(db, game_id: int):
             "period": h.period,
             "time": format_time(h.time),
             "data": {
-                "player": player_map.get(h.player_id),
-                "on_player": player_map.get(h.on_player_id) if h.on_player_id is not None else None,
+                "player": h.player_id,
+                "on_player": h.on_player_id if h.on_player_id is not None else None,
                 "coordinates": {
                     "x_location": h.x_location,
                     "y_location": h.y_location
@@ -206,9 +206,9 @@ def build_game_json(db, game_id: int):
             "period": b.period,
             "time": format_time(b.time),
             "data": {
-                "shooter": player_map.get(b.shooter_id),
-                "blocker": player_map.get(b.blocker_id),
-                "goalie": player_map.get(b.goalie_id),
+                "shooter": b.shooter_id,
+                "blocker": b.blocker_id,
+                "goalie": b.goalie_id,
                 "type": b.type,
                 "quality": b.quality,
                 "coordinates": {
@@ -226,8 +226,8 @@ def build_game_json(db, game_id: int):
             "period": f.period,
             "time": format_time(f.time),
             "data": {
-                "home_player": player_map.get(f.home_player_id),
-                "visiting_player": player_map.get(f.visiting_player_id),
+                "home_player": f.home_player_id,
+                "visiting_player": f.visiting_player_id,
                 "home_win": f.home_win,
                 "coordinates": {
                     "x_location": f.x_location,
@@ -244,7 +244,7 @@ def build_game_json(db, game_id: int):
             "period": g.period,
             "time": format_time(g.time),
             "data": {
-                "goalie": player_map.get(g.player_id),
+                "goalie": g.player_id,
                 "entering": g.entering
             }
         })
@@ -257,8 +257,8 @@ def build_game_json(db, game_id: int):
             "period": p.period,
             "time": format_time(p.time),
             "data": {
-                "shooter": player_map.get(p.shooter_id),
-                "goalie": player_map.get(p.goalie_id),
+                "shooter": p.shooter_id,
+                "goalie": p.goalie_id,
                 "goal": p.is_goal
             }
         })
@@ -269,8 +269,8 @@ def build_game_json(db, game_id: int):
             round:
             [
                 {
-                    "shooter": player_map.get(s.shooter_id),
-                    "goalie": player_map.get(s.goalie_id),
+                    "shooter": s.shooter_id,
+                    "goalie": s.goalie_id,
                     "goal": s.is_goal,
                     "gamewinninggoal": s.is_gamewinninggoal
                 }
