@@ -197,7 +197,7 @@ Note: powerplay is broken on some games early on because the data I scraped it f
 		]
 	}
 }
-	
+```	
 
 ### QUERY PARAMATERS
 
