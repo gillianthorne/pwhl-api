@@ -36,9 +36,9 @@ Retrieve full details for a single game.
 
 ```json
 {
-	"game_id": int,
-	"date": date,
-	"timeline": list of event objects
+	"game_id": "int",
+	"date":"date",
+	"timeline": "list of event objects"
 }
 ```
 
@@ -47,10 +47,10 @@ All events follow this format except shootouts:
 
 ```json
 {
-	"type": str,
-	"id": int,
-	"period": str,
-	"time": time,
+	"type":"str",
+	"id":"int",
+	"period":"str",
+	"time":"time",
 	"data": {}
 }
 ```
@@ -59,20 +59,20 @@ All events follow this format except shootouts:
 
 ```json
 "data": {
-	"goalie": int,
-	"entering": bool
+	"goalie":"int",
+	"entering": "bool"
 }
 
 ### FACEOFF
 
 ```json
 "data": {
-	"home_player": int,
-	"visiting_player": int,
-	"home_win": bool,
+	"home_player":"int",
+	"visiting_player":"int",
+	"home_win":"bool",
 	"coordinates": {
-		"x_location": int,
-		"y_location": int
+		"x_location":"int",
+		"y_location": "int"
 	}
 }
 ```
@@ -81,33 +81,33 @@ All events follow this format except shootouts:
 
 ```json
 "data": {
-	"scorer": str,
+	"scorer":"str",
 	"assists": [
 		{
-			"player": int,
-			"type": "primary" or "secondary"
+			"player":"int",
+			"type": "primary or secondary"
 		}
 	],
 	"plus": [
 		{
-			"player": int,
+			"player":"int",
 		}
 	],
 	"minus": [
 		{
-			"player": int,
+			"player":"int",
 		}
 	],
 	"strength": {
-		"powerplay": bool,
-		"shorthanded": bool,
-		"emptynet": bool,
-		"insurance": bool,
-		"gamewinning": bool
+		"powerplay":"bool",
+		"shorthanded":"bool",
+		"emptynet":"bool",
+		"insurance":"bool",
+		"gamewinning": "bool"
 	},
 	"coordinates": {
-		"x_location": int,
-		"y_location": int
+		"x_location":"int",
+		"y_location": "int"
 	}
 }
 ```
@@ -116,14 +116,14 @@ All events follow this format except shootouts:
 
 ```json
 "data": {
-	"shooter": int,
-	"goalie": int,
-	"goal": bool,
-	"type": str,
-	"quality": str,
+	"shooter":"int",
+	"goalie":"int",
+	"goal":"bool",
+	"type":"str",
+	"quality":"str",
 	"coordinates": {
-		"x_location": int,
-		"y_location": int
+		"x_location":"int",
+		"y_location": "int"
 	}
 }
 ```
@@ -132,14 +132,14 @@ All events follow this format except shootouts:
 
 ```json
 "data": {
-	"shooter": int,
-	"blocker": int,
-	"goalie": int,
-	"type": str,
-	"quality": str,
+	"shooter":"int",
+	"blocker":"int",
+	"goalie":"int",
+	"type":"str",
+	"quality":"str",
 	"coordinates": {
-		"x_location": int,
-		"y_location": int
+		"x_location":"int",
+		"y_location": "int"
 	}
 }
 ```	
@@ -148,11 +148,11 @@ All events follow this format except shootouts:
 
 ```json
 "data": {
-	"player":  int,
-	"on_player": int,
+	"player": "int",
+	"on_player":"int",
 	"coordinates": {
-		"x_location": int,
-		"y_location": int
+		"x_location":"int",
+		"y_location": "int"
 	}
 }
 ```
@@ -162,12 +162,12 @@ Note: powerplay is broken on some games early on because the data I scraped it f
 
 ```json
 "data" {
-	"taken_by": int,
-	"served_by": int,
-	"length": int,
-	"type": str,
-	"bench": bool,
-	"powerplay": bool
+	"taken_by":"int",
+	"served_by":"int",
+	"length":"int",
+	"type":"str",
+	"bench":"bool",
+	"powerplay": "bool"
 }
 ```
 
@@ -175,9 +175,9 @@ Note: powerplay is broken on some games early on because the data I scraped it f
 
 ```json
 "data" {
-	"shooter": int,
-	"goalie": int,
-	"goal": bool
+	"shooter":"int",
+	"goalie":"int",
+	"goal": "bool"
 }
 ```
 
@@ -187,12 +187,12 @@ Note: powerplay is broken on some games early on because the data I scraped it f
 {
 	"type": "shootout",
 	"rounds": {
-		round (int): [
+		"round (int)": [
 			{
-				"shooter": int,
-				"goalie": int,
-				"goal": bool,
-				"gamewinninggoal": bool
+				"shooter":"int",
+				"goalie":"int",
+				"goal":"bool",
+				"gamewinninggoal": "bool"
 			}
 		]
 	}
