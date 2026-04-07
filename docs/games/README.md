@@ -42,7 +42,7 @@ Retrieve full details for a single game.
 }
 ```
 
-## EVENT STRUCTURE
+### EVENT STRUCTURE
 All events follow this format except shootouts:
 
 ```json
@@ -55,7 +55,7 @@ All events follow this format except shootouts:
 }
 ```
 
-## GOALIE_CHANGE
+### GOALIE_CHANGE
 
 ```json
 "data": {
@@ -63,7 +63,7 @@ All events follow this format except shootouts:
 	"entering": bool
 }
 
-## FACEOFF
+### FACEOFF
 
 ```json
 "data": {
@@ -77,7 +77,7 @@ All events follow this format except shootouts:
 }
 ```
 
-## GOAL
+### GOAL
 
 ```json
 "data": {
@@ -112,7 +112,7 @@ All events follow this format except shootouts:
 }
 ```
 
-## SHOT
+### SHOT
 
 ```json
 "data": {
@@ -128,7 +128,7 @@ All events follow this format except shootouts:
 }
 ```
 
-## BLOCKED_SHOT
+### BLOCKED_SHOT
 
 ```json
 "data": {
@@ -144,7 +144,7 @@ All events follow this format except shootouts:
 }
 ```	
 
-## HIT
+### HIT
 
 ```json
 "data": {
@@ -157,7 +157,7 @@ All events follow this format except shootouts:
 }
 ```
 
-## PENALTY
+### PENALTY
 Note: powerplay is broken on some games early on because the data I scraped it from was wonky. If you want to check if it is a powerplay, please compare times to the previous penalty. 
 
 ```json
@@ -171,7 +171,7 @@ Note: powerplay is broken on some games early on because the data I scraped it f
 }
 ```
 
-## PENALTY_SHOT
+### PENALTY_SHOT
 
 ```json
 "data" {
@@ -181,7 +181,7 @@ Note: powerplay is broken on some games early on because the data I scraped it f
 }
 ```
 
-## SHOOTOUT
+### SHOOTOUT
 
 ```json
 {
@@ -198,3 +198,11 @@ Note: powerplay is broken on some games early on because the data I scraped it f
 	}
 }
 	
+
+### QUERY PARAMATERS
+
+All events can be passed in as a query parameter in format
+
+```
+GET /games/{game_id}?event_type={event_type}
+```
