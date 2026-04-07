@@ -18,6 +18,6 @@ class Game(Base):
 
     home_team = relationship("Team", foreign_keys=[home_team_id])
     visiting_team = relationship("Team", foreign_keys=[visiting_team_id])
-    game_season = relationship("Season", foreign_keys=[season])
-    game_venue = relationship("Venue", foreign_keys=[venue])
+    game_season = relationship("Season")
+    game_venue = relationship("Venue")
     

@@ -14,4 +14,4 @@ class Season(Base):
     season_type = Column(Integer, ForeignKey("season_descriptions.id"))
     season_year = Column(String(8))
 
-    s_type = relationship("SeasonDescription", foreign_keys=[season_type])
+    s_type = relationship("SeasonDescription")
