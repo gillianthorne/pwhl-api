@@ -24,9 +24,6 @@ from utils.utils import time_convert, time_to_seconds, format_time
 def build_game_json(db, game_id: int):
     game = db.query(Game).filter(Game.id == game_id).first()
 
-    players = db.query(Player.id, Player.name).all()
-    player_map = {p.id: p.name for p in players}
-
     goals = (
         db.query(Goal)
         .filter(Goal.game_id == game_id)
