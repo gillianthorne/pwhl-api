@@ -10,7 +10,5 @@ class Player(Base):
     name = Column(String(50))
     shoots = Column(String(1))
     catches = Column(String(1))
-    jersey_number = Column(Integer)
-    position = Column(String(2))
     birthdate = Column(Date)
     hometown = Column(String(75))
