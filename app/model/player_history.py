@@ -5,6 +5,8 @@ from app.database import Base
 
 
 class PlayerHistory(Base):
+    __tablename__ = "player_history"
+
     id = Column(Integer, ForeignKey("players.id"))
     start_date = Column(Date)
     end_date = Column(Date)
@@ -16,5 +18,5 @@ class PlayerHistory(Base):
     team = relationship("Team")
 
     __table_args__ = (
-        PrimaryKeyConstraint("id", "start_date")
+        PrimaryKeyConstraint("id", "start_date"),
     )

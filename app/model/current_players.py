@@ -5,6 +5,8 @@ from app.database import Base
 
 
 class CurrentPlayers(Base):
+    __tablename__ = "current_players"
+
     id = Column(Integer, ForeignKey("players.id"), primary_key=True)
     start_date = Column(Date)
     end_date = Column(Date)
