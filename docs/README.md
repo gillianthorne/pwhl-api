@@ -49,18 +49,16 @@ To be revealed once ready
 # FOLDER STRUCTURE
 ```
 docs/
-    README.md
-    games/
-        README.md
-	known_issues.md
-    players/
-	README.md
-	known_issues.md
-    teams/
-	README.md
-	known_issues.md
-    standings/
-	README.md
-	known_issues.md
+│
+├── README.md
+├── games/
+│   └── README.md
+│   └── known_issues.md
+├── players/
+│   └── README.md
+│   └── known_issues.md
+├── teams/
+│   └── README.md
+│   └── known_issues.md
 ```
 	
