@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
 
 from app.database import Base
 
@@ -12,3 +13,6 @@ class Team(Base):
     abbreviation = Column(String(3))
     logo = Column(String)
     division_id = Column(Integer)
+    first_season_id = Column(Integer, ForeignKey("seasons.id"))
+
+    first_season = relationship("Season")
