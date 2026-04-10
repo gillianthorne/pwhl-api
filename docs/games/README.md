@@ -62,6 +62,7 @@ All events follow this format except shootouts:
 	"goalie":"int",
 	"entering": "bool"
 }
+```
 
 ### FACEOFF
 
