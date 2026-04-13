@@ -150,7 +150,7 @@ def build_game_json(db, game_id: int):
             "time": format_time(p.time),
             "data": {
                 "taken_by": p.taken_by_id,
-                "seved_by": p.served_by_id,
+                "served_by": p.served_by_id,
                 "length": p.length,
                 "type": p.description,
                 "bench": p.is_bench,
