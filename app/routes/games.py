@@ -6,6 +6,49 @@ from app.services.game_service import build_game_json, get_games_json
 
 router = APIRouter()
 
+def extract_player_ids(event: dict):
+    data = event.get("data", {})
+    event_type = event.get("type")
+
+    if event_type == "goalie_change":
+        return {data["goalie"]}
+    
+    if event_type == "faceoff":
+        return {data["home_player"], data["visiting_player"]}
+
+    if event_type == "goal":
+        ids = set()
+        if data.get("scorer"):
+            ids.add(data["scorer"])
+        for a in data.get("assists", []):
+            ids.add(a["player"])
+        for p in data.get("plus", []):
+            ids.add(p["player"])
+        for m in data.get("minus", []):
+            ids.add(m["player"])
+        return ids
+    
+    if event_type == "shot":
+        return {data["shooter"], data["goalie"]}
+    
+    if event_type == "blocked_shot":
+        return {data["shooter"], data["blocker"], data["goalie"]}
+
+    if event_type == "hit":
+        return {data["player"], data["on_player"]}
+    
+    if event_type == "penalty":
+        return {data["taken_by"], data["served_by"]}
+    
+    if event_type == "penalty_shot":
+        return {data["shooter"], data["goalie"]}
+    
+    if event_type == "shootout":
+        return {data["shooter"], data["goalie"]}
+    
+    return set()
+
+
 def get_db():
     db = SessionLocal()
     try:
@@ -17,19 +60,26 @@ def get_db():
 def get_game(
     game_id,
     event_type: str | None = None,
+    player_id: int | None = None,
     db = Depends(get_db),
 ):
     events = build_game_json(db, game_id)
-    if not event_type:
+    if not event_type and not player_id:
         print("not event type")
         return events
     
-    filtered = [e for e in events["events"] if e["type"] == event_type]
+    filtered = events["events"]
+    
+    if event_type:
+        filtered = [e for e in filtered if e["type"] == event_type]
+    
+    if player_id:
+        filtered = [e for e in filtered if player_id in extract_player_ids(e)]
 
     if not filtered:
-        return {"error": "{event_type} does not exist."}
-    
-    return filtered
+        return {"error": "no events found matching the given filters."}
+
+    return filtered  
 
 
 @router.get("/")
