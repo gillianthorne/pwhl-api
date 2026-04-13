@@ -1,7 +1,5 @@
 from collections import defaultdict
 
-from sqlalchemy.orm import joinedload
-
 from app.model.assist import Assist
 from app.model.blocked_shot import BlockedShot
 from app.model.faceoff import Faceoff
@@ -300,7 +298,9 @@ def build_game_json(db, game_id: int):
         "game_id": game.id,
         "date": str(game.date),
         "home_team": game.home_team.name,
+        "home_team_goals": game.home_goals,
         "visiting_team": game.visiting_team.name,
+        "visiting_team_goals": game.visiting_goals,
         "season": game.game_season.name,
         "venue": game.game_venue.name,
         "attendance": game.attendance
