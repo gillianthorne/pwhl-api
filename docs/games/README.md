@@ -1,0 +1,450 @@
+# Games API
+
+Base path: `/games`
+
+All endpoints are read-only and return JSON. Player references in all responses are integer IDs.
+
+---
+
+## Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/games/` | List all games with optional filters |
+| GET | `/games/{game_id}` | Full play-by-play event timeline for a game |
+| GET | `/games/{game_id}/summary` | Game summary with shots, goals, and penalties by period |
+
+---
+
+## GET `/games/`
+
+Returns a list of games. All query parameters are optional; omitting them returns all games.
+
+### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `team` | integer | No | Filter to games where this team ID was the home or visiting team. |
+| `league_year` | string | No | Filter by season year, e.g. `"2023-2024"`. |
+| `season_type` | integer | No | Filter by season type ID (references the `season_descriptions` table). |
+
+### Response
+
+Returns an array of game objects.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | integer | Unique game identifier. |
+| `date` | string | Game date in `YYYY-MM-DD` format. |
+| `home_team` | string | Full name of the home team. |
+| `visiting_team` | string | Full name of the visiting team. |
+| `season` | string | Season name (e.g. `"2023-2024 Regular Season"`). |
+| `venue` | string | Arena name. |
+| `start_time` | string | Game start time. |
+| `end_time` | string | Game end time. |
+| `duration` | string | Total game duration. |
+
+### Example
+
+```
+GET /games/?team=12&league_year=2023-2024&season_type=1
+```
+
+```json
+[
+  {
+	"id": 4821,
+	"date": "2023-11-15",
+	"home_team": "Barrie Colts",
+	"visiting_team": "Kingston Frontenacs",
+	"season": "2023-2024 Regular Season",
+	"venue": "Sadlon Arena",
+	"start_time": "7:00 PM",
+	"end_time": "9:47 PM",
+	"duration": "2:47:00"
+  }
+]
+```
+
+---
+
+## GET `/games/{game_id}`
+
+Returns the full play-by-play timeline for a single game, sorted chronologically by period and time. Optionally filter events by type and/or player.
+
+### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `game_id` | integer | Yes | The ID of the game to retrieve. |
+
+### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `event_type` | string | No | Return only events of this type. See [Event Types](#event-types) below. |
+| `player_id` | integer | No | Return only events in which this player was involved. |
+
+When both `event_type` and `player_id` are supplied, both filters are applied (AND logic). If no events match, an error object is returned:
+
+```json
+{ "error": "no events found matching the given filters." }
+```
+
+### Response
+
+When no filters are applied, the response is a top-level object:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `game_data` | object | Core game metadata (see below). |
+| `events` | array | Chronologically sorted list of event objects. |
+| `shootout` | object | Present only when the game went to a shootout. Contains a `rounds` map. |
+
+When filters are applied, the response is an array of matching event objects directly (no `game_data` wrapper).
+
+#### `game_data` fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `game_id` | integer | Unique game identifier. |
+| `date` | string | Game date. |
+| `home_team` | string | Home team full name. |
+| `home_team_goals` | integer | Goals scored by the home team. |
+| `visiting_team` | string | Visiting team full name. |
+| `visiting_team_goals` | integer | Goals scored by the visiting team. |
+| `win_type` | string | How the game was decided: `"REG"`, `"OT"`, or `"SO"`. |
+| `season` | string | Season name. |
+| `venue` | string | Arena name. |
+| `attendance` | integer | Announced attendance. |
+
+---
+
+### Event Types
+
+| Event Type | Description |
+|------------|-------------|
+| `goal` | A goal scored, including scorer, assists, plus/minus players, strength flags, and coordinates. |
+| `shot` | A shot on goal with shooter, goalie, shot type, quality rating, and coordinates. |
+| `blocked_shot` | A shot that was blocked, with shooter, blocker, and goalie IDs. |
+| `hit` | A body check, recording both the hitter and the player hit. |
+| `penalty` | A penalty call with infraction type, duration, and who took/served it. |
+| `penalty_shot` | A penalty shot attempt, recording shooter, goalie, and whether it was a goal. |
+| `faceoff` | A faceoff, recording home and visiting player and which team won. |
+| `goalie_change` | A goalie substitution, noting whether the goalie is entering or leaving. |
+
+> **Note:** Shootout attempts do not appear in the `events` array. They are returned separately in the top-level `shootout` object.
+
+---
+
+### Event Object Structure
+
+Every event in the `events` array shares a common envelope:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | Event type identifier (see [Event Types](#event-types)). |
+| `id` | integer | Unique event ID. |
+| `period` | string | Period identifier: `"1"`, `"2"`, `"3"`, `"OT"`, etc. |
+| `time` | string | Elapsed time within the period (`MM:SS`). |
+| `data` | object | Event-specific payload (see below). |
+
+---
+
+### Event `data` Schemas
+
+#### `goal`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `scorer` | integer | Player ID of the goal scorer. |
+| `assists` | array | Array of `{ "player": int, "type": "primary"\|"secondary" }`. |
+| `plus` | array | Array of `{ "player": int }` for players earning a plus. |
+| `minus` | array | Array of `{ "player": int }` for players earning a minus. |
+| `strength.powerplay` | boolean | `true` if a power-play goal. |
+| `strength.shorthanded` | boolean | `true` if a shorthanded goal. |
+| `strength.emptynet` | boolean | `true` if scored into an empty net. |
+| `strength.insurance` | boolean | `true` if this is an insurance goal. |
+| `strength.gamewinning` | boolean | `true` if this is the game-winning goal. |
+| `coordinates.x_location` | integer | X coordinate on the ice surface. |
+| `coordinates.y_location` | integer | Y coordinate on the ice surface. |
+
+#### `shot`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `shooter` | integer | Player ID of the shooter. |
+| `goalie` | integer | Player ID of the goalie who faced the shot. |
+| `goal` | boolean | `true` if the shot resulted in a goal. |
+| `type` | string | Shot type (e.g. wrist, slap, snap). |
+| `quality` | string | Scoring chance quality rating. |
+| `coordinates.x_location` | integer | X coordinate of the shot. |
+| `coordinates.y_location` | integer | Y coordinate of the shot. |
+
+#### `blocked_shot`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `shooter` | integer | Player ID of the shooter. |
+| `blocker` | integer | Player ID of the player who blocked the shot. |
+| `goalie` | integer | Player ID of the goalie. |
+| `type` | string | Shot type. |
+| `quality` | string | Scoring chance quality rating. |
+| `coordinates.x_location` | integer | X coordinate. |
+| `coordinates.y_location` | integer | Y coordinate. |
+
+#### `hit`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `player` | integer | Player ID of the player delivering the hit. |
+| `on_player` | integer \| null | Player ID of the player receiving the hit, or `null` if not recorded. |
+| `coordinates.x_location` | integer | X coordinate. |
+| `coordinates.y_location` | integer | Y coordinate. |
+
+#### `penalty`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `taken_by` | integer | Player ID of the player who committed the infraction. |
+| `served_by` | integer | Player ID of the player who served the penalty (may differ for bench minors). |
+| `length` | integer | Penalty duration in minutes. |
+| `type` | string | Penalty description/infraction type. |
+| `bench` | boolean | `true` if this is a bench penalty. |
+| `powerplay` | boolean | `true` if the penalty resulted in a power play. |
+
+#### `penalty_shot`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `shooter` | integer | Player ID of the shooter. |
+| `goalie` | integer | Player ID of the goalie. |
+| `is_goal` | boolean | `true` if the penalty shot was converted into a goal. |
+
+#### `faceoff`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `home_player` | integer | Player ID of the home team's faceoff participant. |
+| `visiting_player` | integer | Player ID of the visiting team's faceoff participant. |
+| `home_win` | boolean | `true` if the home team won the faceoff. |
+| `coordinates.x_location` | integer | X coordinate of the faceoff dot. |
+| `coordinates.y_location` | integer | Y coordinate of the faceoff dot. |
+
+#### `goalie_change`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `goalie` | integer | Player ID of the goalie. |
+| `entering` | boolean | `true` if the goalie is entering the game; `0` if leaving. |
+
+---
+
+### Shootout Object
+
+When present, the top-level `shootout` key contains a `rounds` object keyed by round number (`1`, `2`, `3`, …). Each round is an array of attempt objects:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `shooter` | integer | Player ID of the shooter. |
+| `goalie` | integer | Player ID of the goalie. |
+| `is_goal` | boolean | `true` if the attempt was successful. |
+| `is_gamewinninggoal` | boolean | `true` if this attempt decided the shootout. |
+
+---
+
+### Examples
+
+```
+GET /games/4821
+GET /games/4821?event_type=goal
+GET /games/4821?player_id=77
+GET /games/4821?event_type=shot&player_id=77
+```
+
+**Full game response:**
+```json
+{
+  "game_data": {
+	"game_id": 4821,
+	"date": "2023-11-15",
+	"home_team": "Barrie Colts",
+	"home_team_goals": 3,
+	"visiting_team": "Kingston Frontenacs",
+	"visiting_team_goals": 2,
+	"win_type": "REG",
+	"season": "2023-2024 Regular Season",
+	"venue": "Sadlon Arena",
+	"attendance": 3812
+  },
+  "events": [
+	{
+	  "type": "goal",
+	  "id": 9103,
+	  "period": "1",
+	  "time": "07:42",
+	  "data": {
+		"scorer": 204,
+		"assists": [
+		  { "player": 88, "type": "primary" },
+		  { "player": 31, "type": "secondary" }
+		],
+		"plus": [{ "player": 204 }, { "player": 88 }],
+		"minus": [{ "player": 55 }],
+		"strength": {
+		  "powerplay": 0,
+		  "shorthanded": 0,
+		  "emptynet": 0,
+		  "insurance": 0,
+		  "gamewinning": 0
+		},
+		"coordinates": { "x_location": 42, "y_location": -11 }
+	  }
+	}
+  ]
+}
+```
+
+---
+
+## GET `/games/{game_id}/summary`
+
+Returns a structured summary of the game including period-by-period breakdowns of shots, goals, and penalties. Player-to-team assignment is resolved using both current rosters and historical roster data at the time of the game.
+
+### Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `game_id` | integer | Yes | The ID of the game to summarize. |
+
+### Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `game_id` | integer | Unique game identifier. |
+| `date` | string | Game date. |
+| `home_team` | string | Home team full name. |
+| `home_team_goals` | integer | Goals scored by the home team. |
+| `visiting_team` | string | Visiting team full name. |
+| `visiting_team_goals` | integer | Goals scored by the visiting team. |
+| `win_type` | string | How the game was decided: `"REG"`, `"OT"`, or `"SO"`. |
+| `season` | string | Season name. |
+| `venue` | string | Arena name. |
+| `start_time` | string | Game start time. |
+| `end_time` | string | Game end time. |
+| `duration` | string | Total game duration. |
+| `attendance` | integer | Announced attendance. |
+| `data.shots` | object | Shot counts by period and total, split by home/visiting. |
+| `data.goals` | object | Goal details grouped by period. |
+| `data.penalties` | object | Penalty details grouped by period. |
+
+#### `data.shots`
+
+An object keyed by period (`"1"`, `"2"`, `"3"`, `"OT"`, etc.) and `"total"`. Each value contains:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `home` | integer | Shot count for the home team. |
+| `visiting` | integer | Shot count for the visiting team. |
+
+#### `data.goals`
+
+An object keyed by period. Each value is an array of goal objects:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `goal.time` | string | Time of the goal within the period (`MM:SS`). |
+| `goal.scorer` | integer | Player ID of the goal scorer. |
+| `goal.assists` | array | Array of `{ "player": int, "type": "primary"\|"secondary" }`, sorted by assist type. |
+| `goal.strength.powerplay` | boolean | `true` if a power-play goal. |
+| `goal.strength.shorthanded` | boolean | `true` if a shorthanded goal. |
+| `goal.strength.emptynet` | boolean | `true` if scored into an empty net. |
+| `goal.strength.insurance` | boolean | `true` if this is an insurance goal. |
+| `goal.strength.gamewinning` | boolean | `true` if this is the game-winning goal. |
+
+#### `data.penalties`
+
+An object keyed by period. Each value is an array of penalty objects:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `penalty.time` | string | Time of the penalty within the period (`MM:SS`). |
+| `penalty.taken_by` | integer | Player ID of the penalized player. |
+| `penalty.served_by` | integer | Player ID of the player who served the penalty. |
+| `penalty.description` | string | Penalty infraction type. |
+| `penalty.length` | integer | Penalty duration in minutes. |
+| `penalty.powerplay` | boolean | `true` if the penalty resulted in a power play. |
+| `penalty.bench` | boolean | `true` if this is a bench minor. |
+
+### Example
+
+```
+GET /games/4821/summary
+```
+
+```json
+{
+  "game_id": 4821,
+  "date": "2023-11-15",
+  "home_team": "Barrie Colts",
+  "home_team_goals": 3,
+  "visiting_team": "Kingston Frontenacs",
+  "visiting_team_goals": 2,
+  "win_type": "REG",
+  "season": "2023-2024 Regular Season",
+  "venue": "Sadlon Arena",
+  "start_time": "19:00:00",
+  "end_time": "21:47:00",
+  "duration": "02:47:00",
+  "attendance": 3812,
+  "data": {
+	"shots": {
+	  "1": { "home": 12, "visiting": 9 },
+	  "2": { "home": 8,  "visiting": 11 },
+	  "3": { "home": 10, "visiting": 7 },
+	  "total": { "home": 30, "visiting": 27 }
+	},
+	"goals": {
+	  "1": [
+		{
+		  "goal": {
+			"time": "07:42",
+			"scorer": 204,
+			"assists": [{ "player": 88, "type": "primary" }],
+			"strength": {
+			  "powerplay": 0, "shorthanded": 0,
+			  "emptynet": 0, "insurance": 0, "gamewinning": 0
+			}
+		  }
+		}
+	  ]
+	},
+	"penalties": {
+	  "2": [
+		{
+		  "penalty": {
+			"time": "11:03",
+			"taken_by": 55,
+			"served_by": 55,
+			"description": "Hooking",
+			"length": 2,
+			"powerplay": 1,
+			"bench": 0
+		  }
+		}
+	  ]
+	}
+  }
+}
+```
+
+---
+
+## Conventions
+
+- **Player IDs** — All player references are integer IDs. Resolve names via the players endpoint.
+- **Period values** — Periods are strings: `"1"`, `"2"`, `"3"` for regulation, `"OT"` for overtime.
+- **Boolean fields** — Boolean fields serialize as `true`/`false`.
+- **`win_type`** — `"REG"` = regulation, `"OT"` = overtime, `"SO"` = shootout.
+- **Shootout events** — Shootout attempts are excluded from the `events` timeline and returned in a separate top-level `shootout` object on the `/games/{game_id}` response.
+- **Roster resolution** — The `/summary` endpoint resolves rosters using both `current_players` and `player_history`, so player-to-team assignment is accurate for historical games.
