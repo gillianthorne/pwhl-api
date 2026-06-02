@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Date, Time
+from sqlalchemy import Column, Integer, ForeignKey, Date, String, Time
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -11,6 +11,7 @@ class Game(Base):
     home_goals = Column(Integer)
     visiting_team_id = Column(Integer, ForeignKey("teams.id"))
     visiting_goals = Column(Integer)
+    win_type = Column(String)
     season = Column(Integer, ForeignKey("seasons.id"))
     venue = Column(Integer, ForeignKey("arenas.venue_id"))
     attendance = Column(Integer)
