@@ -25,7 +25,7 @@ Returns a list of games. All query parameters are optional; omitting them return
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `team` | integer | No | Filter to games where this team ID was the home or visiting team. |
-| `league_year` | string | No | Filter by season year, e.g. `"2023-2024"`. |
+| `league_year` | string | No | Filter by season year as an eight character string, e.g. `"20252026"`. The inaugral season is `"00002024"`. |
 | `season_type` | integer | No | Filter by season type ID (references the `season_descriptions` table). |
 
 ### Response
@@ -38,7 +38,7 @@ Returns an array of game objects.
 | `date` | string | Game date in `YYYY-MM-DD` format. |
 | `home_team` | string | Full name of the home team. |
 | `visiting_team` | string | Full name of the visiting team. |
-| `season` | string | Season name (e.g. `"2023-2024 Regular Season"`). |
+| `season` | string | Season name (e.g. `"2025-2026 Regular Season"`). |
 | `venue` | string | Arena name. |
 | `start_time` | string | Game start time. |
 | `end_time` | string | Game end time. |
@@ -47,22 +47,22 @@ Returns an array of game objects.
 ### Example
 
 ```
-GET /games/?team=12&league_year=2023-2024&season_type=1
+GET /games/?team=6&league_year=20252026&season_type=1
 ```
 
 ```json
 [
   {
-	"id": 4821,
-	"date": "2023-11-15",
-	"home_team": "Barrie Colts",
-	"visiting_team": "Kingston Frontenacs",
-	"season": "2023-2024 Regular Season",
-	"venue": "Sadlon Arena",
-	"start_time": "7:00 PM",
-	"end_time": "9:47 PM",
-	"duration": "2:47:00"
-  }
+    "id": 210,
+    "date": "2025-11-21",
+    "home_team": "Minnesota Frost",
+    "visiting_team": "Toronto Sceptres",
+    "season": "2025-26 Regular Season",
+    "venue": "Xcel Energy Center",
+    "start_time": "06:00:21",
+    "end_time": "08:00:38",
+    "duration": "02:00:17"
+  },
 ]
 ```
 
@@ -145,7 +145,7 @@ Every event in the `events` array shares a common envelope:
 |-------|------|-------------|
 | `type` | string | Event type identifier (see [Event Types](#event-types)). |
 | `id` | integer | Unique event ID. |
-| `period` | string | Period identifier: `"1"`, `"2"`, `"3"`, `"OT"`, etc. |
+| `period` | string | Period identifier: `"1"`, `"2"`, `"3"`, and subsequent OT periods continuing this pattern. |
 | `time` | string | Elapsed time within the period (`MM:SS`). |
 | `data` | object | Event-specific payload (see below). |
 
@@ -207,7 +207,7 @@ Every event in the `events` array shares a common envelope:
 | Field | Type | Description |
 |-------|------|-------------|
 | `taken_by` | integer | Player ID of the player who committed the infraction. |
-| `served_by` | integer | Player ID of the player who served the penalty (may differ for bench minors). |
+| `served_by` | integer | Player ID of the player who served the penalty (may differ in situations such as game misconducts). |
 | `length` | integer | Penalty duration in minutes. |
 | `type` | string | Penalty description/infraction type. |
 | `bench` | boolean | `true` if this is a bench penalty. |
@@ -256,51 +256,92 @@ When present, the top-level `shootout` key contains a `rounds` object keyed by r
 ### Examples
 
 ```
-GET /games/4821
-GET /games/4821?event_type=goal
-GET /games/4821?player_id=77
-GET /games/4821?event_type=shot&player_id=77
+GET /games/299
+GET /games/299?event_type=goal
+GET /games/299?player_id=36
+GET /games/299?event_type=shot&player_id=36
 ```
 
 **Full game response:**
 ```json
 {
   "game_data": {
-	"game_id": 4821,
-	"date": "2023-11-15",
-	"home_team": "Barrie Colts",
-	"home_team_goals": 3,
-	"visiting_team": "Kingston Frontenacs",
-	"visiting_team_goals": 2,
-	"win_type": "REG",
-	"season": "2023-2024 Regular Season",
-	"venue": "Sadlon Arena",
-	"attendance": 3812
+    "game_id": 299,
+    "date": "2026-03-27",
+    "home_team": "Toronto Sceptres",
+    "home_team_goals": 0,
+    "visiting_team": "Boston Fleet",
+    "visiting_team_goals": 4,
+    "win_type": "REG",
+    "season": "2025-26 Regular Season",
+    "venue": "Coca-Cola Coliseum",
+    "attendance": 8636
   },
   "events": [
 	{
-	  "type": "goal",
-	  "id": 9103,
-	  "period": "1",
-	  "time": "07:42",
-	  "data": {
-		"scorer": 204,
-		"assists": [
-		  { "player": 88, "type": "primary" },
-		  { "player": 31, "type": "secondary" }
-		],
-		"plus": [{ "player": 204 }, { "player": 88 }],
-		"minus": [{ "player": 55 }],
-		"strength": {
-		  "powerplay": 0,
-		  "shorthanded": 0,
-		  "emptynet": 0,
-		  "insurance": 0,
-		  "gamewinning": 0
-		},
-		"coordinates": { "x_location": 42, "y_location": -11 }
-	  }
-	}
+    "type": "goal",
+    "id": 1472,
+    "period": "2",
+    "time": "14:32",
+    "data": {
+      "scorer": 36,
+      "assists": [
+        {
+          "player": 15,
+          "type": "primary"
+        },
+        {
+          "player": 182,
+          "type": "secondary"
+        }
+      ],
+      "plus": [
+        {
+          "player": 8
+        },
+        {
+          "player": 15
+        },
+        {
+          "player": 36
+        },
+        {
+          "player": 185
+        },
+        {
+          "player": 255
+        }
+      ],
+      "minus": [
+        {
+          "player": 26
+        },
+        {
+          "player": 56
+        },
+        {
+          "player": 63
+        },
+        {
+          "player": 200
+        },
+        {
+          "player": 313
+        }
+      ],
+      "strength": {
+        "powerplay": false,
+        "shorthanded": false,
+        "emptynet": false,
+        "insurance": false,
+        "gamewinning": false
+      },
+      "coordinates": {
+        "x_location": 535,
+        "y_location": 174
+      }
+    }
+  }
   ]
 }
 ```
@@ -340,7 +381,7 @@ Returns a structured summary of the game including period-by-period breakdowns o
 
 #### `data.shots`
 
-An object keyed by period (`"1"`, `"2"`, `"3"`, `"OT"`, etc.) and `"total"`. Each value contains:
+An object keyed by period (`"1"`, `"2"`, `"3"`, `"4"`, etc.) and `"total"`. Each value contains:
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -384,56 +425,74 @@ GET /games/4821/summary
 
 ```json
 {
-  "game_id": 4821,
-  "date": "2023-11-15",
-  "home_team": "Barrie Colts",
-  "home_team_goals": 3,
-  "visiting_team": "Kingston Frontenacs",
-  "visiting_team_goals": 2,
+  "game_id": 299,
+  "date": "2026-03-27",
+  "home_team": "Toronto Sceptres",
+  "home_team_goals": 0,
+  "visiting_team": "Boston Fleet",
+  "visiting_team_goals": 4,
   "win_type": "REG",
-  "season": "2023-2024 Regular Season",
-  "venue": "Sadlon Arena",
-  "start_time": "19:00:00",
-  "end_time": "21:47:00",
-  "duration": "02:47:00",
-  "attendance": 3812,
+  "season": "2025-26 Regular Season",
+  "venue": "Coca-Cola Coliseum",
+  "start_time": "06:07:00",
+  "end_time": "08:25:00",
+  "duration": "02:18:00",
+  "attendance": 8636,
   "data": {
-	"shots": {
-	  "1": { "home": 12, "visiting": 9 },
-	  "2": { "home": 8,  "visiting": 11 },
-	  "3": { "home": 10, "visiting": 7 },
-	  "total": { "home": 30, "visiting": 27 }
-	},
-	"goals": {
-	  "1": [
-		{
-		  "goal": {
-			"time": "07:42",
-			"scorer": 204,
-			"assists": [{ "player": 88, "type": "primary" }],
-			"strength": {
-			  "powerplay": 0, "shorthanded": 0,
-			  "emptynet": 0, "insurance": 0, "gamewinning": 0
-			}
-		  }
-		}
-	  ]
-	},
-	"penalties": {
-	  "2": [
-		{
-		  "penalty": {
-			"time": "11:03",
-			"taken_by": 55,
-			"served_by": 55,
-			"description": "Hooking",
-			"length": 2,
-			"powerplay": 1,
-			"bench": 0
-		  }
-		}
-	  ]
-	}
+    "shots": {
+      "1": {
+        "home": 4,
+        "visiting": 10
+      },
+      "2": {
+        "home": 9,
+        "visiting": 7
+      },
+      "3": {
+        "home": 5,
+        "visiting": 6
+      },
+      "total": {
+        "home": 18,
+        "visiting": 23
+      }
+    },
+    "goals": {
+      "1": {
+        "home": 0,
+        "visiting": 1
+      },
+      "2": {
+        "home": 0,
+        "visiting": 2
+      },
+      "3": {
+        "home": 0,
+        "visiting": 1
+      },
+      "total": {
+        "home": 0,
+        "visiting": 4
+      }
+    },
+    "penalties": {
+      "1": {
+        "home": 1,
+        "visiting": 1
+      },
+      "2": {
+        "home": 0,
+        "visiting": 0
+      },
+      "3": {
+        "home": 2,
+        "visiting": 1
+      },
+      "total": {
+        "home": 3,
+        "visiting": 2
+      }
+    }
   }
 }
 ```
@@ -443,7 +502,7 @@ GET /games/4821/summary
 ## Conventions
 
 - **Player IDs** — All player references are integer IDs. Resolve names via the players endpoint.
-- **Period values** — Periods are strings: `"1"`, `"2"`, `"3"` for regulation, `"OT"` for overtime.
+- **Period values** — Periods are strings: `"1"`, `"2"`, `"3"` for regulation, `"4"` for overtime, increasing with each subsequent OT period in the postseason.
 - **Boolean fields** — Boolean fields serialize as `true`/`false`.
 - **`win_type`** — `"REG"` = regulation, `"OT"` = overtime, `"SO"` = shootout.
 - **Shootout events** — Shootout attempts are excluded from the `events` timeline and returned in a separate top-level `shootout` object on the `/games/{game_id}` response.
