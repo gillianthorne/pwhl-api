@@ -506,4 +506,228 @@ GET /games/4821/summary
 - **Boolean fields** — Boolean fields serialize as `true`/`false`.
 - **`win_type`** — `"REG"` = regulation, `"OT"` = overtime, `"SO"` = shootout.
 - **Shootout events** — Shootout attempts are excluded from the `events` timeline and returned in a separate top-level `shootout` object on the `/games/{game_id}` response.
-- **Roster resolution** — The `/summary` endpoint resolves rosters using both `current_players` and `player_history`, so player-to-team assignment is accurate for historical games.
+- **Roster resolution** — The `/summary` endpoint resolves rosters using both `current_players` and `player_history`, so player-to-team assignment is accurate for previous games.
+
+---
+ 
+## GET `/games/{game_id}/stats/skater`
+ 
+Returns per-player skater statistics for a single game. Goalies are excluded. Results are split by home and visiting team, and can optionally be filtered to a single team.
+ 
+Player-to-team assignment is resolved using both current rosters and historical roster data at the time of the game.
+ 
+### Path Parameters
+ 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `game_id` | integer | Yes | The ID of the game to retrieve skater stats for. |
+ 
+### Query Parameters
+ 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `team` | integer | No | Filter results to a single team by team ID. When omitted, stats for both teams are returned. |
+ 
+### Response
+ 
+The shape of the response depends on whether a `team` filter is applied.
+ 
+#### Without a `team` filter
+ 
+| Field | Type | Description |
+|-------|------|-------------|
+| `home` | integer | Team ID of the home team. |
+| `visiting` | integer | Team ID of the visiting team. |
+| `stats.home` | object | Skater stats for the home team, keyed by player ID. |
+| `stats.visiting` | object | Skater stats for the visiting team, keyed by player ID. |
+ 
+#### With a `team` filter
+ 
+When `team` matches the home team:
+ 
+| Field | Type | Description |
+|-------|------|-------------|
+| `home` | integer | Team ID of the requested team. |
+| `stats` | object | Skater stats for that team, keyed by player ID. |
+ 
+When `team` matches the visiting team:
+ 
+| Field | Type | Description |
+|-------|------|-------------|
+| `visiting` | integer | Team ID of the requested team. |
+| `stats` | object | Skater stats for that team, keyed by player ID. |
+ 
+---
+ 
+### Player Stat Object
+ 
+Each player ID key maps to an array containing a single stat object with the following fields:
+ 
+| Field | Type | Description |
+|-------|------|-------------|
+| `toi` | string \| array | Time on ice in `HH:MM:SS` format, or an empty array `[]` if no TOI was recorded. |
+| `shots` | integer | Shots on goal taken. |
+| `goals` | integer | Goals scored. |
+| `assists` | integer | Assists recorded (primary and secondary combined). |
+| `penalties.number` | integer | Number of penalties taken. |
+| `penalties.pim` | integer | Total penalty minutes. |
+| `penalty_shots.taken` | integer | Number of penalty shots taken. |
+| `penalty_shots.goal` | integer | Number of penalty shots converted into goals. |
+| `hits` | integer | Hits delivered. |
+| `blocked_shots` | integer | Shots blocked. |
+| `faceoffs.taken` | integer | Faceoffs taken. |
+| `faceoffs.won` | integer | Faceoffs won. |
+| `shootout_attempts.attempt` | integer | Shootout attempts taken. |
+| `shootout_attempts.goal` | integer | Shootout attempts converted into goals. |
+ 
+> **Note on faceoffs:** When no `team` filter is supplied, each faceoff is counted for both participants (home and visiting), and the winner is determined per side. When a `team` filter is applied, only that team's players have their faceoff stats populated; the opposing players are not included in the response.
+ 
+> **Note on `toi`:** Players who dressed but did not record any ice time will have `toi` returned as an empty array `[]` rather than a time string.
+ 
+---
+ 
+### Examples
+ 
+```
+GET /games/299/stats/skater
+GET /games/299/stats/skater?team=6
+```
+ 
+**Response without a team filter:**
+ 
+```json
+{
+  "home": 6,
+  "visiting": 1,
+  "stats": {
+    "home": {
+      "44": [
+        {
+          "toi": "00:20:52",
+          "shots": 2,
+          "goals": 0,
+          "assists": 0,
+          "penalties": {
+            "number": 0,
+            "pim": 0
+          },
+          "penalty_shots": {
+            "taken": 0,
+            "goal": 0
+          },
+          "hits": 1,
+          "blocked_shots": 1,
+          "faceoffs": {
+            "taken": 0,
+            "won": 0
+          },
+          "shootout_attempts": {
+            "attempt": 0,
+            "goal": 0
+          }
+        }
+      ],
+      "73": [
+        {
+          "toi": "00:19:18",
+          "shots": 2,
+          "goals": 0,
+          "assists": 0,
+          "penalties": {
+            "number": 0,
+            "pim": 0
+          },
+          "penalty_shots": {
+            "taken": 0,
+            "goal": 0
+          },
+          "hits": 0,
+          "blocked_shots": 1,
+          "faceoffs": {
+            "taken": 20,
+            "won": 10
+          },
+          "shootout_attempts": {
+            "attempt": 0,
+            "goal": 0
+          }
+        }
+      ]
+    },
+    "visiting": {
+      "97": [
+        {
+          "toi": "00:16:31",
+          "shots": 4,
+          "goals": 2,
+          "assists": 0,
+          "penalties": {
+            "number": 0,
+            "pim": 0
+          },
+          "penalty_shots": {
+            "taken": 0,
+            "goal": 0
+          },
+          "hits": 1,
+          "blocked_shots": 0,
+          "faceoffs": {
+            "taken": 11,
+            "won": 4
+          },
+          "shootout_attempts": {
+            "attempt": 0,
+            "goal": 0
+          }
+        }
+      ]
+    }
+  }
+}
+```
+ 
+**Response with a team filter (home team):**
+ 
+```json
+{
+  "home": 6,
+  "stats": {
+    "44": [
+      {
+        "toi": "00:20:52",
+        "shots": 2,
+        "goals": 0,
+        "assists": 0,
+        "penalties": {
+          "number": 0,
+          "pim": 0
+        },
+        "penalty_shots": {
+          "taken": 0,
+          "goal": 0
+        },
+        "hits": 1,
+        "blocked_shots": 1,
+        "faceoffs": {
+          "taken": 0,
+          "won": 0
+        },
+        "shootout_attempts": {
+          "attempt": 0,
+          "goal": 0
+        }
+      }
+    ]
+  }
+}
+```
+ 
+---
+ 
+## Conventions
+ 
+- **Player IDs** — All player keys are integer IDs serialized as strings (JSON object keys). Resolve names via the players endpoint.
+- **Goalies** — Goalies are excluded from this endpoint regardless of the `team` filter. See the goalie stats endpoint for goalie-specific data.
+- **Roster resolution** — Player-to-team assignment uses both `current_players` and `player_history`, so results are accurate for historical games.
+- **`toi` format** — Time on ice is returned as `HH:MM:SS`. Players with no recorded ice time return `[]` instead.
+
