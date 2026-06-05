@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.database import SessionLocal
-from app.services.game_service import build_game_json, get_game_summary_json, get_games_json
+from app.services.game_service import build_game_json, get_game_summary_json, get_games_json, get_skater_stats_json
 
 
 router = APIRouter()
@@ -104,3 +104,11 @@ def get_game_summary(
     db = Depends(get_db)
 ):
     return get_game_summary_json(db, game_id)
+
+@router.get("/{game_id}/stats/skaters")
+def get_skater_stats(
+    game_id,
+    team: int | None = None,
+    db = Depends(get_db)
+):
+    return get_skater_stats_json(db, game_id, team)
