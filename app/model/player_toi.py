@@ -15,5 +15,5 @@ class PlayerTOI(Base):
     game = relationship("Game")
 
     __table_args__ = (
-        PrimaryKeyConstraint("player_id", "game_id")
+        PrimaryKeyConstraint("player_id", "game_id"),
     )
