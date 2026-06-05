@@ -22,91 +22,108 @@ from app.model.goal import Goal
 from utils.utils import time_convert, time_to_seconds, format_time
 
 def build_game_json(db, game_id: int):
+    # get the first (only) result of the query "get game where game id is the same as the game id that was given"
     game = db.query(Game).filter(Game.id == game_id).first()
 
+    # all goals scored in this game
     goals = (
         db.query(Goal)
         .filter(Goal.game_id == game_id)
         .all()
     )
     
+    # all assists associated with a goal in this game
     assists = (
         db.query(Assist)
         .join(Goal).
         filter(Goal.game_id == game_id)
         .all()
     )
+    # sorting the assists by goal id
     assist_by_goal = defaultdict(list)
     for a in assists:
         assist_by_goal[a.goal_id].append(a)
 
+    # all plus/minus associated with a goal in this game
     plusminus = (
         db.query(PlusMinus)
         .join(Goal)
         .filter(Goal.game_id == game_id)
         .all()
     )
+    # sort into two dicts: plus by goal, and minus by goal
     plus_by_goal = defaultdict(list)
     minus_by_goal = defaultdict(list)
     for pm in plusminus:
         plus_by_goal[pm.goal_id].append(pm) if pm.is_plus else minus_by_goal[pm.goal_id].append(pm)
 
+    # all penalties in this game
     penalties = (
         db.query(Penalty)
         .filter(Penalty.game_id == game_id)
         .all()
     )
 
+    # all shots in this game
     shots = (
         db.query(Shot)
         .filter(Shot.game_id == game_id)
         .all()
     )
 
+    # all hits in this game
     hits = (
         db.query(Hit)
         .filter(Hit.game_id == game_id)
         .all()
     )
 
+    # all blocked shots in this game
     blocked_shots = (
         db.query(BlockedShot)
         .filter(BlockedShot.game_id == game_id)
         .all()
     )
 
+    # all faceoffs in this game
     faceoffs = (
         db.query(Faceoff)
         .filter(Faceoff.game_id == game_id)
         .all()
     )
 
+    # all goalie changes in this game
     goalie_changes = (
         db.query(GoalieChange)
         .filter(GoalieChange.game_id == game_id)
     )
 
+    # all penalty shots in this game
     penalty_shots = (
         db.query(PenaltyShot)
         .filter(PenaltyShot.game_id == game_id)
         .all()
     )
     
+    # all shootouts in this game
     shootouts = (
         db.query(Shootout)
         .filter(Shootout.game_id == game_id)
         .all()
     )
+    # sorting shootouts by round
     shootouts_by_round = defaultdict(list)
     for s in shootouts:
         shootouts_by_round[s.shootout_attempt].append(s)
 
+    # this sets up the json structure for goals. most is self explanatory/.
     goal_list = []
     for g in goals:
         goal_list.append({
             "type": "goal",
             "id": g.id,
             "period": g.period,
+            # i have a utility tool that properly formats a datetime instance in format hh:mm:ss instances into a mm:ss string because all period instances will be under 1 hour 
             "time": format_time(g.time),
             "data": {
                 "scorer": g.scorer_id,
@@ -141,6 +158,7 @@ def build_game_json(db, game_id: int):
             }            
         })
     
+    # formatting all penalties into json
     penalty_list = []
     for p in penalties:
         penalty_list.append({
@@ -158,6 +176,7 @@ def build_game_json(db, game_id: int):
             }
         })
 
+    # formatting all shots into json
     shot_list = []
     for s in shots: 
         shot_list.append({
@@ -178,6 +197,7 @@ def build_game_json(db, game_id: int):
             })
         })
     
+    # formatting all hits into a json
     hit_list = []
     for h in hits:
         hit_list.append({
@@ -187,6 +207,7 @@ def build_game_json(db, game_id: int):
             "time": format_time(h.time),
             "data": {
                 "player": h.player_id,
+                # due to the nature of my data some hits were not "on" anyone (early inaugral season) so i have it set to None if it doesn't exist
                 "on_player": h.on_player_id if h.on_player_id is not None else None,
                 "coordinates": {
                     "x_location": h.x_location,
@@ -195,6 +216,7 @@ def build_game_json(db, game_id: int):
             }
         })
     
+    # formatting blocked shots
     blocked_shot_list = []
     for b in blocked_shots:
         blocked_shot_list.append({
@@ -203,6 +225,7 @@ def build_game_json(db, game_id: int):
             "period": b.period,
             "time": format_time(b.time),
             "data": {
+                # blocker and goalie have the same issue as hits and i am not sure why, they really shouldn't. this is getting resolved ASAP.
                 "shooter": b.shooter_id,
                 "blocker": b.blocker_id,
                 "goalie": b.goalie_id,
@@ -215,6 +238,7 @@ def build_game_json(db, game_id: int):
             }
         })
 
+    # formatting faceoffs
     faceoff_list = []
     for f in faceoffs:
         faceoff_list.append({
@@ -233,6 +257,7 @@ def build_game_json(db, game_id: int):
             }
         })
 
+    # formatting faceoffs
     goalie_change_list = []
     for g in goalie_changes:
         goalie_change_list.append({
@@ -246,6 +271,7 @@ def build_game_json(db, game_id: int):
             }
         })
 
+    # formatting penalty shots
     penalty_shot_list = []
     for p in penalty_shots:
         penalty_shot_list.append({
@@ -260,6 +286,7 @@ def build_game_json(db, game_id: int):
             }
         })
 
+    # formatting shootouts
     shootout = {
         "type": "shootout",
         "rounds": {
@@ -273,11 +300,12 @@ def build_game_json(db, game_id: int):
                 }
             for s in shootouts_by_round[round]
             ]
-            
+        # this is formatted so that the round starts at 1 instead of 0, and ends on the actual number of shootout rounds, not one less due to how Python iterates. For example, if there are 5 rounds, it would be 1, 2, 3, 4, 5 instead of 0, 1, 2, 3, 4.
         for round in range(1, len(shootouts_by_round)+1)
         }
     }
     
+    # we're merging the dicts
     timeline = (
         goalie_change_list +
         faceoff_list +
@@ -289,6 +317,7 @@ def build_game_json(db, game_id: int):
         penalty_shot_list
     )
 
+    # .sort sorts a list in-place, then the key is a tuple running left to right. so 1, 2, 3, 4 etc and then "00:00", "5:23", "19:23" etc. 
     timeline.sort(
         key= lambda e: (
             e["period"],
@@ -296,6 +325,7 @@ def build_game_json(db, game_id: int):
         )
     )
 
+    # header data
     game_data = {
         "game_id": game.id,
         "date": str(game.date),
@@ -309,6 +339,7 @@ def build_game_json(db, game_id: int):
         "attendance": game.attendance
     }
 
+    # and then this adds the shootout to the end if necessary. 
     if len(shootout["rounds"]) > 0:
         return {
             "game_data": game_data,
@@ -322,27 +353,36 @@ def build_game_json(db, game_id: int):
         }
     
 def get_games_json(db, query_filters: dict):
+    # this gets me all games
     query = db.query(Game)
 
+    # if we want all games of a specific team
     if query_filters["team_id"]:
+        # filter for games where the team_id is either home team or visiting team
         query = query.filter(
             (Game.home_team_id == query_filters["team_id"])
             |
             (Game.visiting_team_id == query_filters["team_id"])
         )
 
+    # if we want from a year
     if query_filters["league_year"]:
+        # filter for games played in that year
         query = query.filter(
             Game.game_season.has(Season.season_year == query_filters["league_year"])
         )
 
+    # if we want from a specific season type
     if query_filters["season_type"]:
+        # filter where game_season has the type of season filtered for
         query = query.filter(
             Game.game_season.has(Season.season_type == query_filters["season_type"])
         )
 
+    # finally, actually fetch the games
     all_games = query.all()
 
+    # and now we are returning a list of every game event
     games = []
     for game in all_games:
         games.append({
@@ -360,8 +400,10 @@ def get_games_json(db, query_filters: dict):
     return games
 
 def get_game_summary_json(db, game_id: int):
+    # get the first (only) game with the game_id passed in
     game = db.query(Game).filter(Game.id == game_id).first()
 
+    # get four columns from the current players (that's all we need) then filter by players on one of the two teams
     current = db.query(
                     CurrentPlayers.id.label("id"),
                     CurrentPlayers.team_id.label("team_id"),
@@ -370,6 +412,7 @@ def get_game_summary_json(db, game_id: int):
                 ).filter(
                     (CurrentPlayers.team_id == game.visiting_team_id) | (CurrentPlayers.team_id == game.home_team_id)
                 )
+    # get the same four colummns as before, then filter where they are on the right teams, AND the game date is while they were on the team. 
     previous = db.query(
                     PlayerHistory.id.label("id"),
                     PlayerHistory.team_id.label("team_id"),
@@ -381,8 +424,10 @@ def get_game_summary_json(db, game_id: int):
                     PlayerHistory.end_date >= game.date
                 )
     
+    # and then union them!
     roster_subq = current.union_all(previous).subquery()
 
+    # this joins two tables - we're getting everything from Player, and joining it with the previous query, but only getting two columns
     roster = (
             db.query(
                 Player,
@@ -393,33 +438,28 @@ def get_game_summary_json(db, game_id: int):
             .all()
         )
     
+    # this filters the list into two sub-lists: home and away
     id_by_team = defaultdict(list)
     home = game.home_team_id
     visiting = game.visiting_team_id
     for player, jersey_number, team_id in roster:
-        if team_id == home:
-            id_by_team[home].append(player.id)
-        else:
-            id_by_team[visiting].append(player.id)
+        id_by_team[home if team_id == home else visiting].append(player.id)
 
-    
+    # get all of the shots then filter by player's team
     shots = db.query(Shot).filter(Shot.game_id == game_id).all()
-    # print(len(shots))
 
     home_shots_by_period = defaultdict(list)
     visiting_shots_by_period = defaultdict(list)
     for s in shots:
-        # print(s.period, s.shooter_id)
         if s.shooter_id in id_by_team[home]:
             home_shots_by_period[s.period].append(s)
         else:
             visiting_shots_by_period[s.period].append(s)
 
-    # print(home_shots_by_period, visiting_shots_by_period)
-    
-
+    # we just want a list of periods - can't hard code this in case of overtime going past 1 period in the playoffs
     pd_list = home_shots_by_period.keys()
 
+    # shots by period then as a sum
     shots_data = {
         pd: {
             "home": len(home_shots_by_period[pd]),
@@ -432,6 +472,7 @@ def get_game_summary_json(db, game_id: int):
         }
     }
 
+    # repeat everything in shots for goals
     goals = db.query(Goal).filter(Goal.game_id == game_id).all()
 
     home_goals_by_period = defaultdict(list)
@@ -456,7 +497,7 @@ def get_game_summary_json(db, game_id: int):
     }
 
     
-    
+    # and then again with penalties
     penalties = db.query(Penalty).filter(Penalty.game_id == game_id).all()
     
     home_penalties_by_period = defaultdict(list)
@@ -480,7 +521,7 @@ def get_game_summary_json(db, game_id: int):
         }
     }
 
-
+    # now we're formatting it nicely to be returned
     game_data = {
         "game_id": game.id,
         "date": str(game.date),
