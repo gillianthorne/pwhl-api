@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.database import SessionLocal
-from app.services.game_service import build_game_json, get_games_json
+from app.services.game_service import build_game_json, get_game_summary_json, get_games_json
 
 
 router = APIRouter()
@@ -97,3 +97,10 @@ def get_all_games(
     qf["season_type"] = season_type if season_type else None
 
     return get_games_json(db, qf)
+
+@router.get("/{game_id}/summary")
+def get_game_summary(
+    game_id,
+    db = Depends(get_db)
+):
+    return get_game_summary_json(db, game_id)

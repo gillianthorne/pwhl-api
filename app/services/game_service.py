@@ -2,11 +2,13 @@ from collections import defaultdict
 
 from app.model.assist import Assist
 from app.model.blocked_shot import BlockedShot
+from app.model.current_players import CurrentPlayers
 from app.model.faceoff import Faceoff
 from app.model.goalie_change import GoalieChange
 from app.model.hit import Hit
 from app.model.penalty import Penalty
 from app.model.penalty_shot import PenaltyShot
+from app.model.player_history import PlayerHistory
 from app.model.plus_minus import PlusMinus
 from app.model.shootout import Shootout
 from app.model.shot import Shot
@@ -301,6 +303,7 @@ def build_game_json(db, game_id: int):
         "home_team_goals": game.home_goals,
         "visiting_team": game.visiting_team.name,
         "visiting_team_goals": game.visiting_goals,
+        "win_type": game.win_type,
         "season": game.game_season.name,
         "venue": game.game_venue.name,
         "attendance": game.attendance
@@ -355,3 +358,148 @@ def get_games_json(db, query_filters: dict):
         })
 
     return games
+
+def get_game_summary_json(db, game_id: int):
+    game = db.query(Game).filter(Game.id == game_id).first()
+
+    current = db.query(
+                    CurrentPlayers.id.label("id"),
+                    CurrentPlayers.team_id.label("team_id"),
+                    CurrentPlayers.position.label("position"),
+                    CurrentPlayers.jersey_number.label("jersey_number")
+                ).filter(
+                    (CurrentPlayers.team_id == game.visiting_team_id) | (CurrentPlayers.team_id == game.home_team_id)
+                )
+    previous = db.query(
+                    PlayerHistory.id.label("id"),
+                    PlayerHistory.team_id.label("team_id"),
+                    PlayerHistory.position.label("position"),
+                    PlayerHistory.jersey_number.label("jersey_number")
+                ).filter(
+                    (PlayerHistory.team_id == game.home_team_id) | (PlayerHistory.team_id == game.visiting_team_id), 
+                    PlayerHistory.start_date <= game.date,
+                    PlayerHistory.end_date >= game.date
+                )
+    
+    roster_subq = current.union_all(previous).subquery()
+
+    roster = (
+            db.query(
+                Player,
+                roster_subq.c.jersey_number,
+                roster_subq.c.team_id
+            )
+            .join(roster_subq, Player.id == roster_subq.c.id)
+            .all()
+        )
+    
+    id_by_team = defaultdict(list)
+    home = game.home_team_id
+    visiting = game.visiting_team_id
+    for player, jersey_number, team_id in roster:
+        if team_id == home:
+            id_by_team[home].append(player.id)
+        else:
+            id_by_team[visiting].append(player.id)
+
+    
+    shots = db.query(Shot).filter(Shot.game_id == game_id).all()
+    # print(len(shots))
+
+    home_shots_by_period = defaultdict(list)
+    visiting_shots_by_period = defaultdict(list)
+    for s in shots:
+        # print(s.period, s.shooter_id)
+        if s.shooter_id in id_by_team[home]:
+            home_shots_by_period[s.period].append(s)
+        else:
+            visiting_shots_by_period[s.period].append(s)
+
+    # print(home_shots_by_period, visiting_shots_by_period)
+    
+
+    pd_list = home_shots_by_period.keys()
+
+    shots_data = {
+        pd: {
+            "home": len(home_shots_by_period[pd]),
+            "visiting": len(visiting_shots_by_period[pd])
+        } for pd in pd_list
+    } | {
+        "total": {
+            "home": sum([len(home_shots_by_period[pd]) for pd in pd_list]),
+            "visiting": sum([len(visiting_shots_by_period[per]) for per in pd_list]),
+        }
+    }
+
+    goals = db.query(Goal).filter(Goal.game_id == game_id).all()
+
+    home_goals_by_period = defaultdict(list)
+    visiting_goals_by_period = defaultdict(list)
+
+    for g in goals:
+        if g.scorer_id in id_by_team[home]:
+            home_goals_by_period[g.period].append(g)
+        else:
+            visiting_goals_by_period[g.period].append(g)
+
+    goals_data = {
+        pd: {
+            "home": len(home_goals_by_period[pd]) ,
+            "visiting": len(visiting_goals_by_period[pd])
+        } for pd in pd_list
+    } | {
+        "total": {
+            "home": sum([len(home_goals_by_period[pd]) for pd in pd_list]),
+            "visiting": sum([len(visiting_goals_by_period[pd]) for pd in pd_list])
+        }
+    }
+
+    
+    
+    penalties = db.query(Penalty).filter(Penalty.game_id == game_id).all()
+    
+    home_penalties_by_period = defaultdict(list)
+    visiting_penalties_by_period = defaultdict(list)
+
+    for p in penalties:
+        if p.taken_by_id in id_by_team[home]:
+            home_penalties_by_period[p.period].append(p)
+        else:
+            visiting_penalties_by_period[p.period].append(p)
+
+    penalties_data = {
+        pd: {
+            "home": len(home_penalties_by_period[pd]),
+            "visiting": len(visiting_penalties_by_period[pd])
+        } for pd in pd_list
+    } | {
+        "total": {
+            "home": sum([len(home_penalties_by_period[pd]) for pd in pd_list]),
+            "visiting": sum([len(visiting_penalties_by_period[pd]) for pd in pd_list])
+        }
+    }
+
+
+    game_data = {
+        "game_id": game.id,
+        "date": str(game.date),
+        "home_team": game.home_team.name,
+        "home_team_goals": game.home_goals,
+        "visiting_team": game.visiting_team.name,
+        "visiting_team_goals": game.visiting_goals,
+        "win_type": game.win_type,
+        "season": game.game_season.name,
+        "venue": game.game_venue.name,
+        "start_time": game.start_time,
+        "end_time": game.end_time,
+        "duration": game.duration,
+        "attendance": game.attendance,
+        "data": {
+            "shots": shots_data,
+            "goals": goals_data,
+            "penalties": penalties_data
+        }
+    }
+
+    return game_data
