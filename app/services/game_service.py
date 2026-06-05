@@ -362,10 +362,29 @@ def get_games_json(db, query_filters: dict):
     # if we want all games of a specific team
     if query_filters["team_id"]:
         # filter for games where the team_id is either home team or visiting team
+        if query_filters["home"] == True:
+            query = query.filter (
+                Game.home_team_id == query_filters["team_id"]
+            )
+        elif query_filters["home"] == False:
+            query = query.filter(
+                Game.visiting_team_id == query_filters["team_id"]
+            )
+        else:
+            query = query.filter(
+                (Game.home_team_id == query_filters["team_id"])
+                |
+                (Game.visiting_team_id == query_filters["team_id"])
+            )
+
+    if query_filters["venue"]:
         query = query.filter(
-            (Game.home_team_id == query_filters["team_id"])
-            |
-            (Game.visiting_team_id == query_filters["team_id"])
+            Game.venue == query_filters["venue"]
+        )
+
+    if query_filters["win_type"]:
+        query = query.filter(
+            Game.win_type == query_filters["win_type"].upper()
         )
 
     # if we want from a year
@@ -382,6 +401,7 @@ def get_games_json(db, query_filters: dict):
             Game.game_season.has(Season.season_type == query_filters["season_type"])
         )
 
+
     # finally, actually fetch the games
     all_games = query.all()
 
@@ -392,12 +412,16 @@ def get_games_json(db, query_filters: dict):
             "id": game.id,
             "date": str(game.date),
             "home_team": game.home_team.name,
+            "home_goals": game.home_goals,
             "visiting_team": game.visiting_team.name,
+            "visiting_goals": game.visiting_goals,
+            "win_type": game.win_type,
             "season": game.game_season.name,
             "venue": game.game_venue.name,
             "start_time": time_convert(game.start_time),
             "end_time": time_convert(game.end_time),
-            "duration": time_convert(game.duration)
+            "duration": time_convert(game.duration),
+            "attendance": game.attendance
         })
 
     return games

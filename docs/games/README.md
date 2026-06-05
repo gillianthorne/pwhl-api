@@ -24,9 +24,12 @@ Returns a list of games. All query parameters are optional; omitting them return
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `team` | integer | No | Filter to games where this team ID was the home or visiting team. |
+| `team` | integer | No | Filter to games where this team ID was the home or visiting team. Can be used independently or with `home`. |
+| `home` | boolean | No | Filter by home/away games. To be used in conjunction with `team`, does not work otherwise. |
 | `league_year` | string | No | Filter by season year as an eight character string, e.g. `"20252026"`. The inaugral season is `"00002024"`. |
 | `season_type` | integer | No | Filter by season type ID (references the `season_descriptions` table). |
+| `venue` | integer | No | Filter by venue ID, to be found in /venues. |
+| `win_type` | string | No | Filter by one of `"REG"`, `"OT"`, or `"SO"`. |
 
 ### Response
 
@@ -37,12 +40,16 @@ Returns an array of game objects.
 | `id` | integer | Unique game identifier. |
 | `date` | string | Game date in `YYYY-MM-DD` format. |
 | `home_team` | string | Full name of the home team. |
+| `home_goals` | integer | Number of goals scored by the home team. |
 | `visiting_team` | string | Full name of the visiting team. |
+| `visiting_goals` | string | Number of goals scored by the visiting team. |
+| `win_type` | Type of win as one of `"REG"`, `"OT"`, or `"SO"`. |
 | `season` | string | Season name (e.g. `"2025-2026 Regular Season"`). |
 | `venue` | string | Arena name. |
 | `start_time` | string | Game start time. |
 | `end_time` | string | Game end time. |
 | `duration` | string | Total game duration. |
+| `attendance` | integer | Number of fans in attendance. |
 
 ### Example
 
@@ -236,7 +243,7 @@ Every event in the `events` array shares a common envelope:
 | Field | Type | Description |
 |-------|------|-------------|
 | `goalie` | integer | Player ID of the goalie. |
-| `entering` | boolean | `true` if the goalie is entering the game; `0` if leaving. |
+| `entering` | boolean | `true` if the goalie is entering the game. |
 
 ---
 

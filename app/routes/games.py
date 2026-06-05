@@ -87,14 +87,21 @@ def get_all_games(
     team: int | None = None,
     league_year: str | None = None,
     season_type: int | None = None,
+    home: bool | None = None,
+    venue: int | None = None,
+    win_type: str | None = None,
     db = Depends(get_db)
 ):
 
     # get query filters
     qf = {}
     qf["team_id"] = team if team else None
+    # can't do "if home" because it would negate to False if home is False
+    qf["home"] = home if not None else None
     qf["league_year"] = league_year if league_year else None
     qf["season_type"] = season_type if season_type else None
+    qf["venue"] = venue if venue else None
+    qf["win_type"] = win_type if win_type else None
 
     return get_games_json(db, qf)
 
