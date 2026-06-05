@@ -364,14 +364,14 @@ def get_games_json(db, query_filters: dict):
         return {"Error": "Please ensure the ID passed in for your home team is one of the two passed in as a team"}
 
     # if we know what team we want at home and we know the other team
-    if query_filters["home"] == query_filters["team_1"] and query_filters["team_2"]:
+    if query_filters["home"] == query_filters["team_1"] and query_filters["team_2"] and query_filters["home"]:
         # filter for games where the team_id is either home team or visiting team
         query = query.filter(
             Game.home_team_id == query_filters["team_1"],
             Game.visiting_team_id == query_filters["team_2"]
         )
     # above but teams swapped
-    elif query_filters["home"] == query_filters["team_2"] and query_filters["team_1"]:
+    elif query_filters["home"] == query_filters["team_2"] and query_filters["team_1"] and query_filters["home"]:
         query = query.filter(
             Game.home_team_id == query_filters["team_2"],
             Game.visiting_team_id == query_filters["team_1"]
@@ -386,17 +386,13 @@ def get_games_json(db, query_filters: dict):
                 Game.visiting_team_id == query_filters["team_1"])
             )
         )
-    elif query_filters["team_1"] and not query_filters["team_2"]:
+    elif query_filters["team_1"]:
         query = query.filter(
-            (Game.home_team_id == query_filters["team_1"])
-            |
-            (Game.visiting_team_id == query_filters["team_1"])
+            or_(Game.home_team_id == query_filters["team_1"], Game.visiting_team_id == query_filters["team_1"])
         )
-    elif query_filters["team_2"] and not query_filters["team_1"]:
+    elif query_filters["team_2"]:
         query = query.filter(
-            (Game.home_team_id == query_filters["team_2"])
-            |
-            (Game.visiting_team_id == query_filters["team_2"])
+            or_(Game.home_team_id == query_filters["team_2"], Game.visiting_team_id == query_filters["team_2"])
         )
 
     if query_filters["venue"]:
