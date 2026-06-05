@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+from sqlalchemy import or_
+
 from app.model.assist import Assist
 from app.model.blocked_shot import BlockedShot
 from app.model.current_players import CurrentPlayers
@@ -9,12 +11,10 @@ from app.model.hit import Hit
 from app.model.penalty import Penalty
 from app.model.penalty_shot import PenaltyShot
 from app.model.player_history import PlayerHistory
+from app.model.player_toi import PlayerTOI
 from app.model.plus_minus import PlusMinus
 from app.model.shootout import Shootout
 from app.model.shot import Shot
-from app.model.venue import Venue
-from app.model.team import Team
-from app.model.season_description import SeasonDescription
 from app.model.season import Season
 from app.model.player import Player
 from app.model.game import Game
@@ -544,3 +544,209 @@ def get_game_summary_json(db, game_id: int):
     }
 
     return game_data
+
+def get_skater_stats_json(db, game_id: int, team: int | None = None):
+    game = db.query(Game).filter(Game.id == game_id).first()
+
+    # get four columns from the current players (that's all we need) then filter by players on one of the two teams
+    current = db.query(
+                    CurrentPlayers.id.label("id"),
+                    CurrentPlayers.team_id.label("team_id"),
+                    CurrentPlayers.position.label("position"),
+                    CurrentPlayers.jersey_number.label("jersey_number")
+                ).filter(
+                    (CurrentPlayers.team_id == game.visiting_team_id) | (CurrentPlayers.team_id == game.home_team_id)
+                )
+    # get the same four colummns as before, then filter where they are on the right teams, AND the game date is while they were on the team. 
+    previous = db.query(
+                    PlayerHistory.id.label("id"),
+                    PlayerHistory.team_id.label("team_id"),
+                    PlayerHistory.position.label("position"),
+                    PlayerHistory.jersey_number.label("jersey_number")
+                ).filter(
+                    (PlayerHistory.team_id == game.home_team_id) | (PlayerHistory.team_id == game.visiting_team_id), 
+                    PlayerHistory.start_date <= game.date,
+                    PlayerHistory.end_date >= game.date
+                )
+    
+    # and then union them!
+    roster_subq = current.union_all(previous).subquery()
+
+    # this joins two tables - we're getting everything from Player, and joining it with the previous query, but only getting two columns
+    query = (
+            db.query(
+                Player,
+                roster_subq.c.jersey_number,
+                roster_subq.c.team_id,
+                roster_subq.c.position
+            )
+            .join(roster_subq, Player.id == roster_subq.c.id)
+        )
+    
+    # further filter for just one team if needed
+    if team:
+        print("TEAM")
+        query = query.filter(roster_subq.c.team_id == team)
+
+    roster = query.all()
+    
+    # sort players by team but only if they aren't goalies
+    id_by_team = defaultdict(list)
+    all_ids = []
+    home = game.home_team_id
+    visiting = game.visiting_team_id
+    for player, jersey_number, team_id, position in roster:
+        if position != "G":
+            id_by_team[home if team_id == home else visiting].append(player.id)
+            all_ids.append(player.id)
+
+    # doing every query first so i can set up the home and visiting dicts properly
+    shots = db.query(Shot).filter(Shot.game_id == game_id, Shot.shooter_id.in_(all_ids)).all()
+    shots_by_player = defaultdict(list)
+
+    goals = db.query(Goal).filter(Goal.game_id == game_id, Goal.scorer_id.in_(all_ids)).all()
+    goals_by_player = defaultdict(list)
+
+    assists = db.query(Assist).join(Goal).filter(Goal.game_id == game_id, Assist.player_id.in_(all_ids)).all()
+    assists_by_player = defaultdict(list)
+
+    penalties = db.query(Penalty).filter(Penalty.game_id == game_id, Penalty.taken_by_id.in_(all_ids)).all()
+    penalties_by_player = defaultdict(list)
+
+    penalty_shots = db.query(PenaltyShot).filter(PenaltyShot.game_id == game_id, PenaltyShot.shooter_id.in_(all_ids)).all()
+    penalty_shots_by_player = defaultdict(list)
+
+    hits = db.query(Hit).filter(Hit.game_id == game_id, Hit.player_id.in_(all_ids)).all()
+    hits_by_player = defaultdict(list)
+
+    blocked_shots = db.query(BlockedShot).filter(BlockedShot.game_id == game_id, BlockedShot.blocker_id.in_(all_ids)).all()
+    blocked_shots_by_player = defaultdict(list)
+
+    faceoffs = db.query(Faceoff).filter(
+        or_(Faceoff.visiting_player_id.in_(all_ids), Faceoff.home_player_id.in_(all_ids)), Faceoff.game_id == game_id).all()
+    faceoffs_by_player = defaultdict(list)
+
+    shootouts = db.query(Shootout).filter(Shootout.game_id == game_id, Shootout.shooter_id.in_(all_ids)).all()
+    shootouts_by_player = defaultdict(list)
+
+    time_on_ice = db.query(PlayerTOI).filter(PlayerTOI.game_id == game_id, PlayerTOI.player_id.in_(all_ids)).all()
+    time_on_ice_by_player = defaultdict(list)
+
+    # if we want a specific change filter by team, but default to no filtering 
+
+    # have the count for events set to 0
+    for p in all_ids:
+        shots_by_player[p] = 0
+        goals_by_player[p] = 0
+        assists_by_player[p] = 0
+        penalties_by_player[p] = {"number": 0, "pim": 0}  
+        penalty_shots_by_player[p] = {"taken": 0, "goal": 0}
+        hits_by_player[p] = 0
+        blocked_shots_by_player[p] = 0
+        faceoffs_by_player[p] = {"taken": 0, "won": 0}
+        shootouts_by_player[p] = {"attempt": 0, "goal": 0}
+        print("ff", faceoffs_by_player[p])
+
+    # count each player's contributions in events
+    for s in shots:
+        shots_by_player[s.shooter_id] += 1
+
+    for g in goals:
+        goals_by_player[g.scorer_id] += 1
+
+    for a in assists:
+        assists_by_player[a.player_id] += 1
+
+    for p in penalties:
+        penalties_by_player[p.taken_by_id]["number"] += 1
+        penalties_by_player[p.taken_by_id]["pim"] += p.length
+
+    for p in penalty_shots:
+        penalty_shots_by_player[p.shooter_id]["taken"] += 1
+        if p.is_goal:
+            penalty_shots_by_player[p.shooter_id]["won"] += 1
+
+    for h in hits:
+        hits_by_player[h.player_id] += 1
+
+    for b in blocked_shots:
+        blocked_shots_by_player[b.blocker_id] += 1
+
+    for f in faceoffs:
+        print("f", faceoffs_by_player[f.home_player_id])
+
+        if team == home:
+            faceoffs_by_player[f.home_player_id]["taken"] += 1
+            if f.home_win:
+                faceoffs_by_player[f.home_player_id]["won"] += 1
+        elif team == visiting:
+            faceoffs_by_player[f.visiting_player_id]["taken"] += 1
+            if not f.home_win:
+                faceoffs_by_player[f.visiting_player_id]["won"] += 1
+        else:
+            faceoffs_by_player[f.home_player_id]["taken"] += 1
+            faceoffs_by_player[f.visiting_player_id]["taken"] += 1
+            if f.home_win:
+                faceoffs_by_player[f.home_player_id]["won"] += 1
+            else:
+                faceoffs_by_player[f.visiting_player_id]["won"] += 1
+
+    for s in shootouts:
+        shootouts_by_player[s.shooter_id]["attempt"] += 1
+        if s.is_goal:
+            shootouts_by_player[s.shooter_id]["goal"] += 1
+
+    for t in time_on_ice:
+        time_on_ice_by_player[t.player_id] = t.time_on_ice
+
+    home_team = defaultdict(list)
+    visiting_team = defaultdict(list)
+    for p in id_by_team[home]:
+        home_team[p].append({
+            "toi": time_on_ice_by_player[p],
+            "shots": shots_by_player[p],
+            "goals": goals_by_player[p],
+            "assists": assists_by_player[p],
+            "penalties": penalties_by_player[p],
+            "penalty_shots": penalty_shots_by_player[p],
+            "hits": hits_by_player[p],
+            "blocked_shots": blocked_shots_by_player[p],
+            "faceoffs": faceoffs_by_player[p],
+            "shootout_attempts": shootouts_by_player[p]
+        })
+
+    for p in id_by_team[visiting]:
+        visiting_team[p].append({
+            "toi": time_on_ice_by_player[p],
+            "shots": shots_by_player[p],
+            "goals": goals_by_player[p],
+            "assists": assists_by_player[p],
+            "penalties": penalties_by_player[p],
+            "penalty_shots": penalty_shots_by_player[p],
+            "hits": hits_by_player[p],
+            "blocked_shots": blocked_shots_by_player[p],
+            "faceoffs": faceoffs_by_player[p],
+            "shootout_attempts": shootouts_by_player[p]
+        })
+
+    if team == home:
+        results = {
+            "home": team,
+            "stats": home_team
+        }
+    elif team == visiting:
+        results = {
+            "visiting": team,
+            "stats": visiting_team
+        }
+    else:
+        results = {
+            "home": home,
+            "visiting": visiting,
+            "stats": {
+                "home": home_team,
+                "visiting": visiting_team
+            }
+        }
+
+    return results
