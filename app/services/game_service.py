@@ -15,6 +15,9 @@ from app.model.player_toi import PlayerTOI
 from app.model.plus_minus import PlusMinus
 from app.model.shootout import Shootout
 from app.model.shot import Shot
+from app.model.venue import Venue
+from app.model.team import Team
+from app.model.season_description import SeasonDescription
 from app.model.season import Season
 from app.model.player import Player
 from app.model.game import Game
@@ -664,7 +667,7 @@ def get_skater_stats_json(db, game_id: int, team: int | None = None):
     for p in penalty_shots:
         penalty_shots_by_player[p.shooter_id]["taken"] += 1
         if p.is_goal:
-            penalty_shots_by_player[p.shooter_id]["won"] += 1
+            penalty_shots_by_player[p.shooter_id]["goal"] += 1
 
     for h in hits:
         hits_by_player[h.player_id] += 1
