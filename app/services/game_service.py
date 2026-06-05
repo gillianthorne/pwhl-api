@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 
 from app.model.assist import Assist
 from app.model.blocked_shot import BlockedShot
@@ -359,23 +359,45 @@ def get_games_json(db, query_filters: dict):
     # this gets me all games
     query = db.query(Game)
 
-    # if we want all games of a specific team
-    if query_filters["team_id"]:
+
+    if query_filters["home"] and query_filters["home"] not in [query_filters["team_1"], query_filters["team_2"]]:
+        return {"Error": "Please ensure the ID passed in for your home team is one of the two passed in as a team"}
+
+    # if we know what team we want at home and we know the other team
+    if query_filters["home"] == query_filters["team_1"] and query_filters["team_2"]:
         # filter for games where the team_id is either home team or visiting team
-        if query_filters["home"] == True:
-            query = query.filter (
-                Game.home_team_id == query_filters["team_id"]
+        query = query.filter(
+            Game.home_team_id == query_filters["team_1"],
+            Game.visiting_team_id == query_filters["team_2"]
+        )
+    # above but teams swapped
+    elif query_filters["home"] == query_filters["team_2"] and query_filters["team_1"]:
+        query = query.filter(
+            Game.home_team_id == query_filters["team_2"],
+            Game.visiting_team_id == query_filters["team_1"]
+        )
+    # if we have both teams but don't care who's at home
+    elif query_filters["team_1"] and query_filters["team_2"]:
+        query = query.filter(
+            or_(
+                and_(Game.home_team_id == query_filters["team_1"],
+                Game.visiting_team_id == query_filters["team_2"]),
+                and_(Game.home_team_id == query_filters["team_2"],
+                Game.visiting_team_id == query_filters["team_1"])
             )
-        elif query_filters["home"] == False:
-            query = query.filter(
-                Game.visiting_team_id == query_filters["team_id"]
-            )
-        else:
-            query = query.filter(
-                (Game.home_team_id == query_filters["team_id"])
-                |
-                (Game.visiting_team_id == query_filters["team_id"])
-            )
+        )
+    elif query_filters["team_1"] and not query_filters["team_2"]:
+        query = query.filter(
+            (Game.home_team_id == query_filters["team_1"])
+            |
+            (Game.visiting_team_id == query_filters["team_1"])
+        )
+    elif query_filters["team_2"] and not query_filters["team_1"]:
+        query = query.filter(
+            (Game.home_team_id == query_filters["team_2"])
+            |
+            (Game.visiting_team_id == query_filters["team_2"])
+        )
 
     if query_filters["venue"]:
         query = query.filter(
@@ -423,6 +445,8 @@ def get_games_json(db, query_filters: dict):
             "duration": time_convert(game.duration),
             "attendance": game.attendance
         })
+
+    games.sort(key=lambda e: e["date"])
 
     return games
 

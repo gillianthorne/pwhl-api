@@ -84,10 +84,11 @@ def get_game(
 
 @router.get("/")
 def get_all_games(
-    team: int | None = None,
+    home: int | None = None,
+    team_1: int | None = None,
+    team_2: int | None = None,
     league_year: str | None = None,
     season_type: int | None = None,
-    home: bool | None = None,
     venue: int | None = None,
     win_type: str | None = None,
     db = Depends(get_db)
@@ -95,9 +96,9 @@ def get_all_games(
 
     # get query filters
     qf = {}
-    qf["team_id"] = team if team else None
-    # can't do "if home" because it would negate to False if home is False
-    qf["home"] = home if not None else None
+    qf["home"] = home if home else None
+    qf["team_1"] = team_1 if team_1 else None
+    qf["team_2"] = team_2 if team_2 else None
     qf["league_year"] = league_year if league_year else None
     qf["season_type"] = season_type if season_type else None
     qf["venue"] = venue if venue else None
