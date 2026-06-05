@@ -24,8 +24,9 @@ Returns a list of games. All query parameters are optional; omitting them return
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `team` | integer | No | Filter to games where this team ID was the home or visiting team. Can be used independently or with `home`. |
-| `home` | boolean | No | Filter by home/away games. To be used in conjunction with `team`, does not work otherwise. |
+| `home` | boolean | No | Filter by home/away games. Can be used with `team_1` and/or `team_2`, or independently. |
+| `team_1` | integer | No | Filter to games where this team ID was the home or visiting team. Can be used with `home` and/or `team_2`, or independently.|
+| `team_2` | integer | No | Filter to games where this team ID was the home or visiting team. Can be used with `home` and/or `team_1`, or independently.|
 | `league_year` | string | No | Filter by season year as an eight character string, e.g. `"20252026"`. The inaugral season is `"00002024"`. |
 | `season_type` | integer | No | Filter by season type ID (references the `season_descriptions` table). |
 | `venue` | integer | No | Filter by venue ID, to be found in /venues. |
@@ -54,21 +55,25 @@ Returns an array of game objects.
 ### Example
 
 ```
-GET /games/?team=6&league_year=20252026&season_type=1
+GET /games/?team_1=6&league_year=20252026&season_type=2
 ```
 
 ```json
 [
   {
-    "id": 210,
-    "date": "2025-11-21",
-    "home_team": "Minnesota Frost",
-    "visiting_team": "Toronto Sceptres",
+    "id": 257,
+    "date": "2026-01-17",
+    "home_team": "Toronto Sceptres",
+    "home_goals": 2,
+    "visiting_team": "Vancouver Goldeneyes",
+    "visiting_goals": 1,
+    "win_type": "OT",
     "season": "2025-26 Regular Season",
-    "venue": "Xcel Energy Center",
-    "start_time": "06:00:21",
-    "end_time": "08:00:38",
-    "duration": "02:00:17"
+    "venue": "Scotiabank Arena",
+    "start_time": "03:00:10",
+    "end_time": "05:00:43",
+    "duration": "02:00:33",
+    "attendance": 17856
   },
 ]
 ```
