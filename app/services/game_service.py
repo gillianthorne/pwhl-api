@@ -419,6 +419,13 @@ def get_games_json(db, query_filters: dict):
             Game.game_season.has(Season.season_type == query_filters["season_type"])
         )
 
+    # if we want takeover tour games, the team id associated with the venue would be -1
+    if query_filters["takeover"]:
+        query = query.filter(
+            Game.game_venue.has(Venue.home_team_id == -1),
+            # if we don't exclude preseason games they'll automatically be included because the arenas aren't associated with a team.
+            Game.game_season.has(Season.season_type != 1)
+        )
 
     # finally, actually fetch the games
     all_games = query.all()
@@ -632,7 +639,6 @@ def get_skater_stats_json(db, game_id: int, team: int | None = None):
     
     # further filter for just one team if needed
     if team:
-        print("TEAM")
         query = query.filter(roster_subq.c.team_id == team)
 
     roster = query.all()
@@ -797,3 +803,47 @@ def get_skater_stats_json(db, game_id: int, team: int | None = None):
         }
 
     return results
+
+def get_goalie_stats_json(db, game_id: int, team: int | None = None):
+    game = db.query(Game).filter(Game.id == game_id).first()
+
+    # get four columns from the current players (that's all we need) then filter by players on one of the two teams
+    current = db.query(
+                    CurrentPlayers.id.label("id"),
+                    CurrentPlayers.team_id.label("team_id"),
+                    CurrentPlayers.position.label("position"),
+                    CurrentPlayers.jersey_number.label("jersey_number")
+                ).filter(
+                    (CurrentPlayers.team_id == game.visiting_team_id) | (CurrentPlayers.team_id == game.home_team_id)
+                )
+    # get the same four colummns as before, then filter where they are on the right teams, AND the game date is while they were on the team. 
+    previous = db.query(
+                    PlayerHistory.id.label("id"),
+                    PlayerHistory.team_id.label("team_id"),
+                    PlayerHistory.position.label("position"),
+                    PlayerHistory.jersey_number.label("jersey_number")
+                ).filter(
+                    (PlayerHistory.team_id == game.home_team_id) | (PlayerHistory.team_id == game.visiting_team_id), 
+                    PlayerHistory.start_date <= game.date,
+                    PlayerHistory.end_date >= game.date
+                )
+    
+    # and then union them!
+    roster_subq = current.union_all(previous).subquery()
+
+    # this joins two tables - we're getting everything from Player, and joining it with the previous query, but only getting two columns
+    query = (
+            db.query(
+                Player,
+                roster_subq.c.jersey_number,
+                roster_subq.c.team_id,
+                roster_subq.c.position
+            )
+            .join(roster_subq, Player.id == roster_subq.c.id)
+        )
+    
+    # further filter for just one team if needed
+    if team:
+        query = query.filter(roster_subq.c.team_id == team)
+
+    roster = query.all()
