@@ -682,8 +682,8 @@ def get_skater_stats_json(db, game_id: int, team: int | None = None):
     shootouts = db.query(Shootout).filter(Shootout.game_id == game_id, Shootout.shooter_id.in_(all_ids)).all()
     shootouts_by_player = defaultdict(list)
 
-    time_on_ice = db.query(PlayerTOI).filter(PlayerTOI.game_id == game_id, PlayerTOI.player_id.in_(all_ids)).all()
-    time_on_ice_by_player = defaultdict(list)
+    toi = db.query(PlayerTOI).filter(PlayerTOI.game_id == game_id, PlayerTOI.player_id.in_(all_ids)).all()
+    toi_by_player = defaultdict(list)
 
     # if we want a specific change filter by team, but default to no filtering 
 
@@ -749,14 +749,14 @@ def get_skater_stats_json(db, game_id: int, team: int | None = None):
         if s.is_goal:
             shootouts_by_player[s.shooter_id]["goal"] += 1
 
-    for t in time_on_ice:
-        time_on_ice_by_player[t.player_id] = t.time_on_ice
+    for t in toi:
+        toi_by_player[t.player_id] = t.time_on_ice
 
     home_team = defaultdict(list)
     visiting_team = defaultdict(list)
     for p in id_by_team[home]:
         home_team[p].append({
-            "toi": time_on_ice_by_player[p],
+            "toi": toi_by_player[p],
             "shots": shots_by_player[p],
             "goals": goals_by_player[p],
             "assists": assists_by_player[p],
@@ -770,7 +770,7 @@ def get_skater_stats_json(db, game_id: int, team: int | None = None):
 
     for p in id_by_team[visiting]:
         visiting_team[p].append({
-            "toi": time_on_ice_by_player[p],
+            "toi": toi_by_player[p],
             "shots": shots_by_player[p],
             "goals": goals_by_player[p],
             "assists": assists_by_player[p],
@@ -847,3 +847,68 @@ def get_goalie_stats_json(db, game_id: int, team: int | None = None):
         query = query.filter(roster_subq.c.team_id == team)
 
     roster = query.all()
+
+    # sort players by team but only if they aren't goalies
+    id_by_team = defaultdict(list)
+    all_ids = []
+    home = game.home_team_id
+    visiting = game.visiting_team_id
+    for player, jersey_number, team_id, position in roster:
+        if position == "G":
+            id_by_team[home if team_id == home else visiting].append(player.id)
+            all_ids.append(player.id)
+
+    toi = db.query(PlayerTOI).filter(PlayerTOI.game_id == game_id, PlayerTOI.player_id.in_(all_ids))
+    toi_by_player = defaultdict(list)
+
+    # shots taken in the game against a goalie we are looking at
+    shots = db.query(Shot).filter(Shot.game_id == game_id, Shot.goalie_id.in_(all_ids)).all()
+
+    # i need to join shots so i can later filter by goalies - this joins them on their unique key - you can't have multiple shots at the same time in the same game
+    goals_against = (
+        db.query(Goal)
+        .join(Shot,
+              (Shot.game_id == Goal.game_id)
+              &
+              (Shot.period == Goal.period)
+              &
+              (Shot.time == Goal.time))
+        .filter(Shot.goalie_id.in_(all_ids))
+        .all()
+    )
+
+    shots_by_player = defaultdict(list)
+    saves_by_player = defaultdict(list)
+    goals_against_by_player = defaultdict(list)
+
+    penalty_shots = db.query(PenaltyShot).filter(PenaltyShot.game_id == game_id, PenaltyShot.goalie_id.in_(all_ids))
+    penalty_shots_by_player = defaultdict(list)
+
+    shootouts = db.query(Shootout).filter(Shootout.goalie_id.in_(all_ids)).all()
+    shootouts_by_player = defaultdict(list)
+
+    for p in all_ids:
+        shots_by_player[p] = {"1": {"shots": 0, "saves": 0, "goals_against": 0},
+                              "2": {"shots": 0, "saves": 0, "goals_against": 0},
+                              "3": {"shots": 0, "saves": 0, "goals_against": 0}}
+        saves_by_player[p] = 0
+        goals_against_by_player[p] = 0
+        penalty_shots_by_player[p] = {"faced": 0, "saved": 0}
+        shootouts_by_player[p] = {"faced": 0, "saved": 0}
+
+    for t in toi:
+        toi_by_player[t.player_id] = t.time_on_ice
+
+    print(shots)
+
+    for s in shots:
+        if s.period not in shots_by_player[s.goalie_id]:
+            shots_by_player[s.goalie_id][s.period] = {"shots": 0, "saves": 0, "goals_against": 0}
+        shots_by_player[s.goalie_id][s.period]["shots"] += 1
+        if s.is_goal:
+            shots_by_player[s.goalie_id][s.period]["goals_against"] += 1
+        else:
+            shots_by_player[s.goalie_id][s.period]["saves"] += 1
+        
+    # for p in penalty_shots:
+        
